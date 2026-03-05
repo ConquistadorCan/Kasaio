@@ -1,36 +1,35 @@
 import { create } from "zustand";
-import type { Category, Transaction, TransactionType } from "../types";
+import type { Category, Transaction } from "../types";
 
 interface AppStore {
+  apiPort: number | null;
   transactions: Transaction[];
   categories: Category[];
-  addTransaction: (transaction: Omit<Transaction, "id">) => void;
-  updateTransaction: (id: string, updates: Partial<Omit<Transaction, "id">>) => void;
-  deleteTransaction: (id: string) => void;
-  addCategory: (category: Omit<Category, "id">) => void;
-  updateCategory: (id: string, updates: Partial<Omit<Category, "id">>) => void;
-  deleteCategory: (id: string) => void;
+  setApiPort: (port: number) => void;
+  setTransactions: (transactions: Transaction[]) => void;
+  setCategories: (categories: Category[]) => void;
+  addTransaction: (transaction: Transaction) => void;
+  updateTransaction: (id: number, updates: Partial<Omit<Transaction, "id">>) => void;
+  deleteTransaction: (id: number) => void;
+  addCategory: (category: Category) => void;
+  updateCategory: (id: number, updates: Partial<Omit<Category, "id">>) => void;
+  deleteCategory: (id: number) => void;
 }
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: generateId(), name: "Salary", color: "#34d399", type: "income" },
-  { id: generateId(), name: "Freelance", color: "#a78bfa", type: "income" },
-  { id: generateId(), name: "Food & Drink", color: "#f87171", type: "expense" },
-  { id: generateId(), name: "Subscriptions", color: "#fbbf24", type: "expense" },
-  { id: generateId(), name: "Transport", color: "#60a5fa", type: "expense" },
-];
 
 export const useAppStore = create<AppStore>((set) => ({
+  apiPort: null,
   transactions: [],
-  categories: DEFAULT_CATEGORIES,
+  categories: [],
+
+  setApiPort: (port) => set({ apiPort: port }),
+
+  setTransactions: (transactions) => set({ transactions }),
+
+  setCategories: (categories) => set({ categories }),
 
   addTransaction: (transaction) =>
     set((state) => ({
-      transactions: [{ ...transaction, id: generateId() }, ...state.transactions],
+      transactions: [transaction, ...state.transactions],
     })),
 
   updateTransaction: (id, updates) =>
@@ -47,7 +46,7 @@ export const useAppStore = create<AppStore>((set) => ({
 
   addCategory: (category) =>
     set((state) => ({
-      categories: [...state.categories, { ...category, id: generateId() }],
+      categories: [...state.categories, category],
     })),
 
   updateCategory: (id, updates) =>
@@ -62,10 +61,3 @@ export const useAppStore = create<AppStore>((set) => ({
       categories: state.categories.filter((c) => c.id !== id),
     })),
 }));
-
-export function selectCategoriesByType(
-  categories: Category[],
-  type: TransactionType
-): Category[] {
-  return categories.filter((c) => c.type === type);
-}

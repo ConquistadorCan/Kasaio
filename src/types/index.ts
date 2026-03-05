@@ -11,4 +11,5 @@ export interface Transaction {
   type: TransactionType;
   date: string;
   description: string | null;
+  category_id: number | null;
 }

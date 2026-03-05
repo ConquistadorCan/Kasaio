@@ -1,6 +1,7 @@
-from contextlib import asynccontextmanager
 import socket
 import uvicorn
+import logging
+import sys
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,10 +18,15 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["tauri://localhost", "http://localhost:1420"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 
 # --- Include routers ---
@@ -38,4 +44,4 @@ async def health_check():
 if __name__ == "__main__":
     port = find_free_port()
     print(f"KASAIO_API_PORT={port}", flush=True)
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    uvicorn.run(app, host="127.0.0.1", port=port, access_log=False)

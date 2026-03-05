@@ -14,6 +14,14 @@ class TransactionCreateSchema(BaseModel):
     category_id: int | None = None
 
 
+class TransactionUpdateSchema(BaseModel):
+    amount: float | None = None
+    type: TransactionTypeEnum | None = None
+    description: str | None = None
+    date: datetime | None = None
+    category_id: int | None = None
+
+
 class TransactionResponseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

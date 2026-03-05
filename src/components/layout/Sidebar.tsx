@@ -121,7 +121,7 @@ export function Sidebar() {
               </button>
 
               {item.enabled && isOpen && item.items && (
-                <div className="mt-0.5 ml-3 flex flex-col gap-0.5 border-l border-white/5 pl-3">
+                <div className="mt-0.5 flex flex-col gap-0.5 border-l border-white/5" style={{ marginLeft: "1.25rem", paddingLeft: "0.75rem" }}>
                   {item.items.map((sub) => {
                     const SubIcon = sub.icon;
                     return (
@@ -130,7 +130,7 @@ export function Sidebar() {
                         to={sub.path}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
+                            "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors",
                             isActive
                               ? "bg-violet-500/15 text-violet-300 font-medium"
                               : "text-white/50 hover:text-white/80 hover:bg-white/5"
