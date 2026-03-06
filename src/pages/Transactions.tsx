@@ -1,5 +1,16 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  ChevronDown,
+  CalendarIcon,
+  ArrowUp,
+} from "lucide-react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 import { transactionsApi } from "../api/transactions";
 import { useAppStore } from "../store/useAppStore";
 import type { Transaction, TransactionType } from "../types";
@@ -160,35 +171,165 @@ function TransactionModal({
             <label className="block text-xs font-medium text-white/50 mb-1.5">
               Category <span className="text-white/25">(optional)</span>
             </label>
-            <select
+            <SelectPrimitive.Root
               value={form.category_id}
-              onChange={(e) => field("category_id", e.target.value)}
-              className="w-full bg-[#0e0e18] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 transition-colors"
+              onValueChange={(val) => field("category_id", val)}
             >
-              <option value="">Uncategorized</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              <SelectPrimitive.Trigger className="w-full flex items-center justify-between bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 transition-colors data-[placeholder]:text-white/20">
+                <SelectPrimitive.Value placeholder="Uncategorized" />
+                <SelectPrimitive.Icon>
+                  <ChevronDown size={14} className="text-white/30" />
+                </SelectPrimitive.Icon>
+              </SelectPrimitive.Trigger>
+
+              <SelectPrimitive.Portal>
+                <SelectPrimitive.Content
+                  position="popper"
+                  sideOffset={4}
+                  className="z-50 w-[var(--radix-select-trigger-width)] bg-[#141422] border border-white/10 rounded-lg shadow-xl overflow-hidden"
+                >
+                  <SelectPrimitive.Viewport className="p-1">
+                    <SelectPrimitive.Item
+                      value="none"
+                      className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[highlighted]:text-white/70"
+                    >
+                      <SelectPrimitive.ItemText>
+                        Uncategorized
+                      </SelectPrimitive.ItemText>
+                    </SelectPrimitive.Item>
+                    {categories.length > 0 && (
+                      <div className="my-1 h-px bg-white/5" />
+                    )}
+                    {categories.map((c) => (
+                      <SelectPrimitive.Item
+                        key={c.id}
+                        value={String(c.id)}
+                        className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                      >
+                        <SelectPrimitive.ItemText>
+                          {c.name}
+                        </SelectPrimitive.ItemText>
+                      </SelectPrimitive.Item>
+                    ))}
+                  </SelectPrimitive.Viewport>
+                </SelectPrimitive.Content>
+              </SelectPrimitive.Portal>
+            </SelectPrimitive.Root>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">
               Date
             </label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => field("date", e.target.value)}
-              className={cn(
-                "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors",
-                errors.date
-                  ? "border-red-500/40 focus:border-red-500/60"
-                  : "border-white/[0.08] focus:border-violet-500/50",
-              )}
-            />
+            <PopoverPrimitive.Root>
+              <PopoverPrimitive.Trigger
+                className={cn(
+                  "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm outline-none transition-colors",
+                  errors.date
+                    ? "border-red-500/40 text-red-400"
+                    : "border-white/[0.08] text-white hover:border-white/20",
+                )}
+              >
+                <span className={form.date ? "text-white" : "text-white/20"}>
+                  {form.date
+                    ? new Intl.DateTimeFormat("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      }).format(new Date(form.date))
+                    : "Pick a date"}
+                </span>
+                <CalendarIcon size={14} className="text-white/30" />
+              </PopoverPrimitive.Trigger>
+
+              <PopoverPrimitive.Portal>
+                <PopoverPrimitive.Content
+                  sideOffset={4}
+                  className="z-50 bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3"
+                  style={
+                    {
+                      "--rdp-accent-color": "#7c5cfc",
+                      "--rdp-accent-background-color": "rgba(124,92,252,0.15)",
+                    } as React.CSSProperties
+                  }
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <button
+                      onClick={() => {
+                        const d = new Date(
+                          form.date ? form.date + "T12:00:00" : Date.now(),
+                        );
+                        d.setMonth(d.getMonth() - 1);
+                        field("date", d.toISOString().split("T")[0]);
+                      }}
+                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-sm font-medium text-white">
+                      {new Intl.DateTimeFormat("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      }).format(
+                        form.date
+                          ? new Date(form.date + "T12:00:00")
+                          : new Date(),
+                      )}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const d = new Date(
+                          form.date ? form.date + "T12:00:00" : Date.now(),
+                        );
+                        d.setMonth(d.getMonth() + 1);
+                        field("date", d.toISOString().split("T")[0]);
+                      }}
+                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <DayPicker
+                    mode="single"
+                    month={
+                      form.date ? new Date(form.date + "T12:00:00") : new Date()
+                    }
+                    hideNavigation
+                    selected={
+                      form.date ? new Date(form.date + "T12:00:00") : undefined
+                    }
+                    onSelect={(day) => {
+                      if (day) {
+                        const local = new Date(
+                          day.getTime() - day.getTimezoneOffset() * 60000,
+                        );
+                        field("date", local.toISOString().split("T")[0]);
+                      }
+                    }}
+                    classNames={{
+                      root: "text-white/80 text-sm",
+                      months: "flex flex-col",
+                      month: "space-y-3",
+                      month_caption: "hidden",
+                      month_grid: "w-full border-collapse",
+                      weekdays: "flex",
+                      weekday:
+                        "w-8 h-8 flex items-center justify-center text-[11px] text-white/20 font-medium",
+                      weeks: "flex flex-col gap-0.5",
+                      week: "flex",
+                      day: "w-8 h-8 flex items-center justify-center",
+                      day_button:
+                        "w-8 h-8 flex items-center justify-center rounded-lg text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors outline-none",
+                      selected: "bg-violet-500/20 rounded-lg",
+                      today:
+                        "bg-red-500/20 rounded-lg text-red-400 font-medium",
+                      outside: "opacity-20",
+                      disabled: "opacity-20 cursor-not-allowed",
+                    }}
+                  />
+                </PopoverPrimitive.Content>
+              </PopoverPrimitive.Portal>
+            </PopoverPrimitive.Root>
             {errors.date && (
               <p className="text-xs text-red-400 mt-1">{errors.date}</p>
             )}
@@ -227,10 +368,23 @@ export function Transactions() {
   } = useAppStore();
 
   const [filter, setFilter] = useState<FilterType>("all");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [mutating, setMutating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  function handleScroll() {
+    if (scrollRef.current) {
+      setShowScrollTop(scrollRef.current.scrollTop > 150);
+    }
+  }
+
+  function scrollToTop() {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     async function fetchTransactions() {
@@ -245,9 +399,12 @@ export function Transactions() {
     fetchTransactions();
   }, [setTransactions]);
 
-  const filtered = transactions.filter((t) =>
-    filter === "all" ? true : t.type === filter,
-  );
+  const filtered = transactions
+    .filter((t) => (filter === "all" ? true : t.type === filter))
+    .sort((a, b) => {
+      const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortOrder === "desc" ? -diff : diff;
+    });
 
   function getCategoryName(category_id: number | null): string {
     if (!category_id) return "—";
@@ -262,7 +419,10 @@ export function Transactions() {
         type: data.type,
         description: data.description || null,
         date: new Date(data.date).toISOString(),
-        category_id: data.category_id ? Number(data.category_id) : null,
+        category_id:
+          data.category_id && data.category_id !== "none"
+            ? Number(data.category_id)
+            : null,
       });
       addTransaction(created);
       setShowModal(false);
@@ -282,7 +442,10 @@ export function Transactions() {
         type: data.type,
         description: data.description || null,
         date: new Date(data.date).toISOString(),
-        category_id: data.category_id ? Number(data.category_id) : null,
+        category_id:
+          data.category_id && data.category_id !== "none"
+            ? Number(data.category_id)
+            : null,
       });
       updateTransaction(editing.id, updated);
       setEditing(null);
@@ -352,17 +515,31 @@ export function Transactions() {
           <p className="text-sm text-red-400">{fetchError}</p>
         </div>
       ) : (
-        <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-          <div className="grid grid-cols-[1fr_100px_140px_110px_120px_60px] px-4 py-3 border-b border-white/5 shrink-0">
-            {["Description", "Type", "Category", "Date", "Amount", ""].map(
-              (col, i) => (
-                <span
-                  key={i}
-                  className="text-[11px] font-medium text-white/30 uppercase tracking-wider"
-                >
-                  {col}
-                </span>
-              ),
+        <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col min-w-0 relative">
+          <div className="grid grid-cols-[minmax(120px,1fr)_90px_120px_100px_110px_52px] px-4 py-3 border-b border-white/5 shrink-0 min-w-[580px]">
+            {["Description", "Type", "Category", "", "Amount", ""].map(
+              (col, i) =>
+                col === "" && i === 3 ? (
+                  <button
+                    key={i}
+                    onClick={() =>
+                      setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+                    }
+                    className="flex items-center gap-1 text-[11px] font-medium text-white/30 uppercase tracking-wider hover:text-white/60 transition-colors"
+                  >
+                    Date
+                    <span className="text-[10px]">
+                      {sortOrder === "desc" ? "↓" : "↑"}
+                    </span>
+                  </button>
+                ) : (
+                  <span
+                    key={i}
+                    className="text-[11px] font-medium text-white/30 uppercase tracking-wider"
+                  >
+                    {col}
+                  </span>
+                ),
             )}
           </div>
 
@@ -371,13 +548,17 @@ export function Transactions() {
               <p className="text-sm text-white/20">No transactions yet</p>
             </div>
           ) : (
-            <div className="overflow-y-auto flex-1">
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="overflow-y-auto overflow-x-auto flex-1"
+            >
               {filtered.map((transaction) => {
                 const badge = TYPE_BADGE[transaction.type];
                 return (
                   <div
                     key={transaction.id}
-                    className="grid grid-cols-[1fr_100px_140px_110px_120px_60px] px-4 py-3.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                    className="grid grid-cols-[minmax(120px,1fr)_90px_120px_100px_110px_52px] px-4 py-3.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center min-w-[580px]"
                   >
                     <span className="text-sm text-white truncate pr-4">
                       {transaction.description ?? "—"}
@@ -427,6 +608,18 @@ export function Transactions() {
               })}
             </div>
           )}
+
+          <button
+            onClick={scrollToTop}
+            className={cn(
+              "absolute bottom-4 right-4 w-10 h-10 flex items-center justify-center bg-violet-600 hover:bg-violet-500 text-white rounded-full shadow-lg transition-all duration-200",
+              showScrollTop
+                ? "opacity-100 scale-100 pointer-events-auto"
+                : "opacity-0 scale-75 pointer-events-none",
+            )}
+          >
+            <ArrowUp size={16} className="shrink-0" />
+          </button>
         </div>
       )}
 

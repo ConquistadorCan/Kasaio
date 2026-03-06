@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 *,
 *::before,
@@ -8,43 +9,43 @@
 
 :root {
   /* Backgrounds */
-  --bg-base:        #08080e;
-  --bg-surface:     #0e0e18;
-  --bg-elevated:    #141422;
-  --bg-overlay:     #1a1a2e;
+  --bg-base: #08080e;
+  --bg-surface: #0e0e18;
+  --bg-elevated: #141422;
+  --bg-overlay: #1a1a2e;
 
   /* Borders */
-  --border-subtle:  rgba(255, 255, 255, 0.05);
+  --border-subtle: rgba(255, 255, 255, 0.05);
   --border-default: rgba(255, 255, 255, 0.09);
-  --border-strong:  rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.15);
 
   /* Text */
-  --text-primary:   #f0f0fa;
+  --text-primary: #f0f0fa;
   --text-secondary: rgba(240, 240, 250, 0.55);
-  --text-muted:     rgba(240, 240, 250, 0.28);
-  --text-disabled:  rgba(240, 240, 250, 0.15);
+  --text-muted: rgba(240, 240, 250, 0.28);
+  --text-disabled: rgba(240, 240, 250, 0.15);
 
   /* Accent */
-  --accent:         #7c5cfc;
-  --accent-hover:   #8f72fd;
-  --accent-subtle:  rgba(124, 92, 252, 0.12);
-  --accent-border:  rgba(124, 92, 252, 0.3);
-  --accent-text:    #a78bfa;
+  --accent: #7c5cfc;
+  --accent-hover: #8f72fd;
+  --accent-subtle: rgba(124, 92, 252, 0.12);
+  --accent-border: rgba(124, 92, 252, 0.3);
+  --accent-text: #a78bfa;
 
   /* Semantic */
-  --success:        #34d399;
+  --success: #34d399;
   --success-subtle: rgba(52, 211, 153, 0.1);
   --success-border: rgba(52, 211, 153, 0.2);
-  --danger:         #f87171;
-  --danger-subtle:  rgba(248, 113, 113, 0.1);
-  --danger-border:  rgba(248, 113, 113, 0.2);
-  --warning:        #fbbf24;
+  --danger: #f87171;
+  --danger-subtle: rgba(248, 113, 113, 0.1);
+  --danger-border: rgba(248, 113, 113, 0.2);
+  --warning: #fbbf24;
   --warning-subtle: rgba(251, 191, 36, 0.1);
   --warning-border: rgba(251, 191, 36, 0.2);
 
   /* Typography */
-  --font-sans: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", monospace;
 
   /* Radius */
   --radius-sm: 6px;
@@ -66,4 +67,30 @@ body,
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* DayPicker overrides */
+.rdp-root {
+  --rdp-accent-color: #7c5cfc !important;
+  --rdp-accent-background-color: rgba(124, 92, 252, 0.15) !important;
+  color: rgba(240, 240, 250, 0.7);
+}
+
+/* Hide number input spin buttons */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
 }
