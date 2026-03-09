@@ -1,5 +1,6 @@
-use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
+use tauri::Manager;
+use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::CommandEvent;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -10,51 +11,63 @@ fn get_api_port(state: State<ApiPort>) -> u16 {
     *state.0.lock().unwrap()
 }
 
-fn spawn_backend() -> u16 {
-    let cwd = std::env::current_dir().expect("Failed to get cwd");
-    eprintln!("[kasaio] CWD: {:?}", cwd);
-
-    let python = if cfg!(target_os = "windows") {
-        "..\\src-backend\\venv\\Scripts\\python.exe"
-    } else {
-        "../src-backend/venv/bin/python"
-    };
-
-    eprintln!("[kasaio] Spawning: {} ..\\src-backend\\main.py", python);
-
-    let mut child = Command::new(python)
-        .arg("..\\src-backend\\main.py")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()
-        .expect("Failed to start backend process");
-
-    let stdout = child.stdout.take().expect("Failed to capture stdout");
-    let reader = BufReader::new(stdout);
-
-    for line in reader.lines() {
-        let line = line.expect("Failed to read line");
-        eprintln!("[kasaio] backend stdout: {}", line);
-        if let Some(port_str) = line.strip_prefix("KASAIO_API_PORT=") {
-            let port: u16 = port_str.trim().parse().expect("Invalid port number");
-            eprintln!("[kasaio] Port found: {}", port);
-            std::mem::forget(child);
-            return port;
-        }
-    }
-
-    panic!("Backend did not print KASAIO_API_PORT");
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let port = spawn_backend();
+    eprintln!("[kasaio] run() started");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .manage(ApiPort(Mutex::new(port)))
+        .manage(ApiPort(Mutex::new(0)))
         .invoke_handler(tauri::generate_handler![get_api_port])
+        .setup(|app| {
+            eprintln!("[kasaio] setup started");
+
+            let shell = app.shell();
+            eprintln!("[kasaio] got shell");
+
+            let sidecar_result = shell.sidecar("python-sidecar");
+            eprintln!("[kasaio] sidecar result: {:?}", sidecar_result.is_ok());
+
+            let (mut rx, _child) = sidecar_result
+                .expect("sidecar not found")
+                .spawn()
+                .expect("failed to spawn sidecar");
+
+            eprintln!("[kasaio] sidecar spawned");
+
+            let handle = app.handle().clone();
+
+            tauri::async_runtime::spawn(async move {
+                eprintln!("[kasaio] async task started");
+                while let Some(event) = rx.recv().await {
+                    match &event {
+                        CommandEvent::Stdout(line) => {
+                            let text = String::from_utf8_lossy(line);
+                            eprintln!("[kasaio] stdout: {}", text);
+                            if let Some(port_str) = text.trim().strip_prefix("KASAIO_API_PORT=") {
+                                if let Ok(port) = port_str.trim().parse::<u16>() {
+                                    eprintln!("[kasaio] port found: {}", port);
+                                    *handle.state::<ApiPort>().0.lock().unwrap() = port;
+                                }
+                            }
+                        }
+                        CommandEvent::Stderr(line) => {
+                            eprintln!("[kasaio] stderr: {}", String::from_utf8_lossy(line));
+                        }
+                        CommandEvent::Error(e) => {
+                            eprintln!("[kasaio] error: {}", e);
+                        }
+                        CommandEvent::Terminated(status) => {
+                            eprintln!("[kasaio] terminated: {:?}", status);
+                        }
+                        _ => {}
+                    }
+                }
+            });
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

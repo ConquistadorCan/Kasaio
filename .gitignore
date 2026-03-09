@@ -25,6 +25,11 @@ dist-ssr
 # Python
 __pycache__/
 *.pyc
+dist/
+build/
 
 # Database
 *.db
+
+# Tauri
+src-tauri/binaries/
