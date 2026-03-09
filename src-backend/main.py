@@ -2,18 +2,34 @@ import socket
 import uvicorn
 import logging
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 
 def find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create all DB tables on startup if they don't exist yet."""
+    from database import engine, Base
+    import models.category  # noqa: F401 — registers the model
+    import models.transaction  # noqa: F401 — registers the model
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
 app = FastAPI(
     title="Kasaio API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -40,6 +56,7 @@ app.include_router(transactions_router)
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
 
 if __name__ == "__main__":
     port = find_free_port()
