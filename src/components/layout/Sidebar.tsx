@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import logoNobg from "../../assets/logo-nobg.png";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -83,14 +84,21 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
     >
       {/* Header */}
       <div className="px-3 py-4 border-b border-white/5 flex items-center justify-between min-w-0">
-        <span
+        <div
           className={cn(
-            "text-lg font-semibold tracking-tight text-white transition-all duration-300 overflow-hidden whitespace-nowrap",
+            "flex items-center gap-2 transition-all duration-300 overflow-hidden",
             open ? "opacity-100 w-auto" : "opacity-0 w-0",
           )}
         >
-          kasa<span className="text-violet-400">io</span>
-        </span>
+          <img
+            src={logoNobg}
+            alt="Kasaio"
+            className="w-6 h-6 shrink-0 object-contain"
+          />
+          <span className="text-lg font-semibold tracking-tight text-white whitespace-nowrap">
+            kasa<span className="text-violet-400">io</span>
+          </span>
+        </div>
         <button
           onClick={onToggle}
           className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-colors"

@@ -374,6 +374,11 @@ export function Transactions() {
   const [mutating, setMutating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [dateRange, setDateRange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const [datePickerMonth, setDatePickerMonth] = useState(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function handleScroll() {
@@ -401,6 +406,13 @@ export function Transactions() {
 
   const filtered = transactions
     .filter((t) => (filter === "all" ? true : t.type === filter))
+    .filter((t) => {
+      if (!dateRange) return true;
+      const date = new Date(t.date).getTime();
+      const from = new Date(dateRange.from + "T00:00:00").getTime();
+      const to = new Date(dateRange.to + "T23:59:59").getTime();
+      return date >= from && date <= to;
+    })
     .sort((a, b) => {
       const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
       return sortOrder === "desc" ? -diff : diff;
@@ -493,21 +505,187 @@ export function Transactions() {
         </button>
       </div>
 
-      <div className="flex gap-1 bg-white/5 p-1 rounded-lg w-fit">
-        {(["all", "income", "expense"] as FilterType[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
+      <div className="flex items-center gap-3">
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg w-fit">
+          {(["all", "income", "expense"] as FilterType[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize",
+                filter === f
+                  ? "bg-white/10 text-white"
+                  : "text-white/40 hover:text-white/70",
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <PopoverPrimitive.Root>
+          <PopoverPrimitive.Trigger
             className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize",
-              filter === f
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/70",
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
+              dateRange
+                ? "bg-violet-500/15 border-violet-500/30 text-violet-300"
+                : "bg-white/5 border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.08]",
             )}
           >
-            {f}
-          </button>
-        ))}
+            <CalendarIcon size={13} />
+            {dateRange
+              ? `${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(dateRange.from + "T12:00:00"))} → ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(dateRange.to + "T12:00:00"))}`
+              : "Date range"}
+          </PopoverPrimitive.Trigger>
+
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              sideOffset={6}
+              align="start"
+              className="z-50 bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() =>
+                    setDatePickerMonth((m) => {
+                      const d = new Date(m);
+                      d.setMonth(d.getMonth() - 1);
+                      return d;
+                    })
+                  }
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => {
+                    const year = datePickerMonth.getFullYear();
+                    const month = datePickerMonth.getMonth();
+                    const monthStart = new Date(year, month, 1);
+                    const monthEnd = new Date(year, month + 1, 0);
+                    const fmt = (d: Date) =>
+                      new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+                        .toISOString()
+                        .split("T")[0];
+
+                    if (!dateRange) {
+                      setDateRange({
+                        from: fmt(monthStart),
+                        to: fmt(monthEnd),
+                      });
+                    } else {
+                      const existingFrom = new Date(
+                        dateRange.from + "T12:00:00",
+                      );
+                      const existingTo = new Date(dateRange.to + "T12:00:00");
+                      const newFrom =
+                        monthStart < existingFrom ? monthStart : existingFrom;
+                      const newTo =
+                        monthEnd > existingTo ? monthEnd : existingTo;
+                      const isSameRange =
+                        fmt(newFrom) === dateRange.from &&
+                        fmt(newTo) === dateRange.to;
+                      if (isSameRange) {
+                        setDateRange(null);
+                      } else {
+                        setDateRange({ from: fmt(newFrom), to: fmt(newTo) });
+                      }
+                    }
+                  }}
+                  className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+                  title="Click to select entire month"
+                >
+                  {new Intl.DateTimeFormat("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  }).format(datePickerMonth)}
+                </button>
+                <button
+                  onClick={() =>
+                    setDatePickerMonth((m) => {
+                      const d = new Date(m);
+                      d.setMonth(d.getMonth() + 1);
+                      return d;
+                    })
+                  }
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+                >
+                  ›
+                </button>
+              </div>
+
+              <DayPicker
+                mode="range"
+                month={datePickerMonth}
+                hideNavigation
+                selected={
+                  dateRange
+                    ? {
+                        from: new Date(dateRange.from + "T12:00:00"),
+                        to: new Date(dateRange.to + "T12:00:00"),
+                      }
+                    : undefined
+                }
+                onSelect={(range) => {
+                  if (!range) {
+                    setDateRange(null);
+                    return;
+                  }
+                  const from = range.from
+                    ? new Date(
+                        range.from.getTime() -
+                          range.from.getTimezoneOffset() * 60000,
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    : null;
+                  const to = range.to
+                    ? new Date(
+                        range.to.getTime() -
+                          range.to.getTimezoneOffset() * 60000,
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    : from;
+                  if (from && to) setDateRange({ from, to });
+                }}
+                classNames={{
+                  root: "text-white/80 text-sm",
+                  months: "flex flex-col",
+                  month: "space-y-3",
+                  month_caption: "hidden",
+                  month_grid: "w-full border-collapse",
+                  weekdays: "flex",
+                  weekday:
+                    "w-8 h-8 flex items-center justify-center text-[11px] text-white/20 font-medium",
+                  weeks: "flex flex-col gap-0.5",
+                  week: "flex",
+                  day: "w-8 h-8 flex items-center justify-center",
+                  day_button:
+                    "w-8 h-8 flex items-center justify-center rounded-lg text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors outline-none",
+                  selected: "bg-violet-500/20 rounded-lg text-violet-300",
+                  range_start:
+                    "bg-violet-500/40 rounded-lg text-white font-medium",
+                  range_end:
+                    "bg-violet-500/40 rounded-lg text-white font-medium",
+                  range_middle: "bg-violet-500/10 rounded-none text-white/70",
+                  today: "bg-red-500/20 rounded-lg text-red-400 font-medium",
+                  outside: "opacity-20",
+                  disabled: "opacity-20 cursor-not-allowed",
+                }}
+              />
+
+              {dateRange && (
+                <button
+                  onClick={() => setDateRange(null)}
+                  className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+                >
+                  Clear filter
+                </button>
+              )}
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
       </div>
 
       {fetchError ? (
