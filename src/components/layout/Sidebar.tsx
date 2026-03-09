@@ -8,6 +8,8 @@ import {
   ChevronDown,
   ChevronRight,
   Wallet,
+  PanelLeftClose,
+  PanelLeftOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -27,6 +29,11 @@ interface TopLevelNav {
   items?: NavItem[];
 }
 
+interface SidebarProps {
+  open: boolean;
+  onToggle: () => void;
+}
+
 const NAV_ITEMS: TopLevelNav[] = [
   {
     id: "dashboard",
@@ -41,7 +48,11 @@ const NAV_ITEMS: TopLevelNav[] = [
     icon: Wallet,
     enabled: true,
     items: [
-      { label: "Transactions", path: "/cash-flow/transactions", icon: ArrowLeftRight },
+      {
+        label: "Transactions",
+        path: "/cash-flow/transactions",
+        icon: ArrowLeftRight,
+      },
       { label: "Categories", path: "/cash-flow/categories", icon: Tag },
     ],
   },
@@ -54,24 +65,42 @@ const NAV_ITEMS: TopLevelNav[] = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onToggle }: SidebarProps) {
   const [openGroups, setOpenGroups] = useState<string[]>(["cash-flow"]);
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
     );
   }
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col h-full bg-[#0d0d14] border-r border-white/5">
-      <div className="px-5 py-5 border-b border-white/5">
-        <span className="text-lg font-semibold tracking-tight text-white">
+    <aside
+      className={cn(
+        "shrink-0 flex flex-col h-full bg-[#0d0d14] border-r border-white/5 overflow-hidden transition-all duration-300 ease-in-out",
+        open ? "w-56" : "w-12",
+      )}
+    >
+      {/* Header */}
+      <div className="px-3 py-4 border-b border-white/5 flex items-center justify-between min-w-0">
+        <span
+          className={cn(
+            "text-lg font-semibold tracking-tight text-white transition-all duration-300 overflow-hidden whitespace-nowrap",
+            open ? "opacity-100 w-auto" : "opacity-0 w-0",
+          )}
+        >
           kasa<span className="text-violet-400">io</span>
         </span>
+        <button
+          onClick={onToggle}
+          className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          {open ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+        </button>
       </div>
 
-      <nav className="flex-1 py-4 px-3 flex flex-col gap-0.5 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 py-4 px-1.5 flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isOpen = openGroups.includes(item.id);
@@ -81,17 +110,25 @@ export function Sidebar() {
               <NavLink
                 key={item.id}
                 to={item.path}
+                title={!open ? item.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-violet-500/15 text-violet-300"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
+                      : "text-white/60 hover:text-white hover:bg-white/5",
                   )
                 }
               >
-                <Icon size={15} />
-                {item.label}
+                <Icon size={15} className="shrink-0" />
+                <span
+                  className={cn(
+                    "overflow-hidden whitespace-nowrap transition-all duration-300",
+                    open ? "opacity-100 w-auto" : "opacity-0 w-0",
+                  )}
+                >
+                  {item.label}
+                </span>
               </NavLink>
             );
           }
@@ -99,29 +136,46 @@ export function Sidebar() {
           return (
             <div key={item.id}>
               <button
-                onClick={() => item.enabled && toggleGroup(item.id)}
+                onClick={() =>
+                  item.enabled && (open ? toggleGroup(item.id) : null)
+                }
                 disabled={!item.enabled}
+                title={!open ? item.label : undefined}
                 className={cn(
-                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
                   item.enabled
                     ? "text-white/60 hover:text-white hover:bg-white/5 cursor-pointer"
-                    : "text-white/20 cursor-not-allowed"
+                    : "text-white/20 cursor-not-allowed",
                 )}
               >
-                <Icon size={15} />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.enabled && (
-                  isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />
-                )}
-                {!item.enabled && (
-                  <span className="text-[10px] bg-white/5 text-white/25 px-1.5 py-0.5 rounded-full">
+                <Icon size={15} className="shrink-0" />
+                <span
+                  className={cn(
+                    "flex-1 text-left overflow-hidden whitespace-nowrap transition-all duration-300",
+                    open ? "opacity-100 w-auto" : "opacity-0 w-0",
+                  )}
+                >
+                  {item.label}
+                </span>
+                {open &&
+                  item.enabled &&
+                  (isOpen ? (
+                    <ChevronDown size={13} className="shrink-0" />
+                  ) : (
+                    <ChevronRight size={13} className="shrink-0" />
+                  ))}
+                {open && !item.enabled && (
+                  <span className="text-[10px] bg-white/5 text-white/25 px-1.5 py-0.5 rounded-full shrink-0">
                     soon
                   </span>
                 )}
               </button>
 
-              {item.enabled && isOpen && item.items && (
-                <div className="mt-0.5 flex flex-col gap-0.5 border-l border-white/5" style={{ marginLeft: "1.25rem", paddingLeft: "0.75rem" }}>
+              {open && item.enabled && isOpen && item.items && (
+                <div
+                  className="mt-0.5 flex flex-col gap-0.5 border-l border-white/5"
+                  style={{ marginLeft: "0.75rem", paddingLeft: "0.5rem" }}
+                >
                   {item.items.map((sub) => {
                     const SubIcon = sub.icon;
                     return (
@@ -133,11 +187,11 @@ export function Sidebar() {
                             "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors",
                             isActive
                               ? "bg-violet-500/15 text-violet-300 font-medium"
-                              : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                              : "text-white/50 hover:text-white/80 hover:bg-white/5",
                           )
                         }
                       >
-                        <SubIcon size={14} />
+                        <SubIcon size={14} className="shrink-0" />
                         {sub.label}
                       </NavLink>
                     );
@@ -149,8 +203,16 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="px-5 py-4 border-t border-white/5">
-        <p className="text-xs text-white/20">v0.1.0</p>
+      {/* Footer */}
+      <div className="px-3 py-4 border-t border-white/5">
+        <span
+          className={cn(
+            "text-xs text-white/20 overflow-hidden whitespace-nowrap transition-all duration-300",
+            open ? "opacity-100" : "opacity-0",
+          )}
+        >
+          v0.1.0
+        </span>
       </div>
     </aside>
   );
