@@ -27,6 +27,7 @@ __pycache__/
 *.pyc
 dist/
 build/
+.env
 
 # Database
 *.db
