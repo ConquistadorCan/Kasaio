@@ -124,7 +124,13 @@ mod release {
     pub fn spawn(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         app.manage(Sidecar(Mutex::new(None)));
 
-        let (mut rx, child) = app.shell().sidecar("python-sidecar")?.spawn()?;
+        let data_dir = app.path().app_data_dir()?;
+        std::fs::create_dir_all(&data_dir)?;
+
+        let (mut rx, child) = app.shell()
+            .sidecar("python-sidecar")?
+            .env("KASAIO_DATA_DIR", data_dir.to_string_lossy().as_ref())
+            .spawn()?;
         *app.state::<Sidecar>().0.lock().unwrap() = Some(child);
 
         let handle = app.handle().clone();

@@ -7,8 +7,10 @@ from typing import AsyncGenerator
 # When running as a PyInstaller bundle, __file__ points to a temp extraction
 # directory. Use sys.executable's parent so the DB lives next to the exe.
 if getattr(sys, "frozen", False):
-    _base_dir = Path(sys.executable).parent
+    # Production: use AppData dir passed by Tauri
+    _base_dir = Path(os.environ["KASAIO_DATA_DIR"])
 else:
+    # Development: use src-backend/ directory
     _base_dir = Path(__file__).parent
 
 DB_PATH = _base_dir / "kasaio.db"
