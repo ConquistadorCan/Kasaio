@@ -8,6 +8,28 @@ fn get_api_port(state: State<ApiPort>) -> u16 {
     *state.0.lock().unwrap()
 }
 
+#[tauri::command]
+fn log_frontend_error(app: tauri::AppHandle, message: String) {
+    #[cfg(debug_assertions)]
+    eprintln!("[kasaio:frontend] {}", message);
+
+    #[cfg(not(debug_assertions))]
+    {
+        use std::io::Write;
+        if let Ok(data_dir) = app.path().app_data_dir() {
+            let log_dir = data_dir.join("logs");
+            let _ = std::fs::create_dir_all(&log_dir);
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_dir.join("frontend.log"))
+            {
+                let _ = writeln!(file, "{}", message);
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -16,7 +38,7 @@ pub fn run() {
         .manage(ApiPort(Mutex::new(0)))
         .setup(setup)
         .on_window_event(on_window_event)
-        .invoke_handler(tauri::generate_handler![get_api_port])
+        .invoke_handler(tauri::generate_handler![get_api_port, log_frontend_error])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -50,8 +72,7 @@ mod dev {
     use super::ApiPort;
     use std::io::{BufRead, BufReader};
     use std::sync::Mutex;
-    use tauri::Manager;
-    use tauri::Emitter;
+    use tauri::{Emitter, Manager};
 
     pub struct Child(pub Mutex<Option<std::process::Child>>);
 
@@ -111,8 +132,7 @@ mod dev {
 mod release {
     use super::ApiPort;
     use std::sync::Mutex;
-    use tauri::Manager;
-    use tauri::Emitter;
+    use tauri::{Emitter, Manager};
     use tauri_plugin_shell::{
         process::{CommandChild, CommandEvent},
         ShellExt,

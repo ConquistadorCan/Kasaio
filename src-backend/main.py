@@ -2,6 +2,8 @@ import socket
 import uvicorn
 import logging
 import sys
+import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,6 +14,26 @@ def find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
+
+def setup_logging():
+    if not getattr(sys, "frozen", False):
+        return
+    
+    log_dir = Path(os.environ["KASAIO_DATA_DIR"]) / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(log_dir / "backend.log", encoding="utf-8"),
+        ]
+    )
+
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+    sys.excepthook = handle_exception
 
 
 @asynccontextmanager
@@ -40,11 +62,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-
 # --- Include routers ---
 from routers.categoies_router import router as categories_router
 from routers.transactions_router import router as transactions_router
@@ -59,6 +76,7 @@ async def health_check():
 
 
 if __name__ == "__main__":
+    setup_logging()
     port = find_free_port()
     print(f"KASAIO_API_PORT={port}", flush=True)
     uvicorn.run(app, host="127.0.0.1", port=port, access_log=False)
