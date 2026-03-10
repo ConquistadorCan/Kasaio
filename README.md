@@ -1,4 +1,4 @@
-# kasaio
+# Kasaio
 
 A desktop application for tracking income and expenses.
 
@@ -33,7 +33,7 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
 1. Clone the repository
 
    ```bash
-   git clone https://github.com/your-username/kasaio.git
+   git clone https://github.com/ConquistadorCan/Kasaio.git
    cd kasaio
    ```
 
@@ -44,6 +44,7 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
    ```
 
 3. Set up the Python virtual environment and install dependencies
+
    ```bash
    cd src-backend
    python -m venv venv
@@ -54,13 +55,11 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
 
 ### Running in Development Mode
 
-Start the Tauri dev server, which concurrently launches the Vite dev server (frontend) and the Tauri shell (native window):
-
 ```bash
 npm run tauri dev
 ```
 
-> **Note:** In dev mode the Python backend still needs to be started separately if you want live API responses. Run `python src-backend/main.py` in a separate terminal with the virtual environment activated. The backend prints its port to stdout (`KASAIO_API_PORT=<port>`), which Tauri reads to connect the frontend to the correct address.
+In dev mode, Tauri automatically spawns the Python backend using the local virtual environment. No separate terminal is needed.
 
 ### Project Structure
 
@@ -94,3 +93,41 @@ npm run build:all
 ```
 
 The `.msi` installer will be available at `src-tauri/target/release/bundle/msi/`.
+
+## Versioning & Releases
+
+Kasaio follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`
+
+- `PATCH` — bug fixes (e.g. `0.1.1`)
+- `MINOR` — new features, backwards compatible (e.g. `0.2.0`)
+- `MAJOR` — breaking changes or major milestones (e.g. `1.0.0`)
+
+The version is defined in two places and must always be in sync:
+
+- `tauri.conf.json` → `version`
+- `package.json` → `version`
+
+### Cutting a Release
+
+Use the release script, which updates both version files, commits, tags, and pushes in one step:
+
+```bash
+npm run release -- 0.2.0
+```
+
+This will:
+
+1. Update the version in `tauri.conf.json` and `package.json`
+2. Commit the version bump
+3. Create a `v0.2.0` git tag
+4. Push the commit and the tag to GitHub
+
+GitHub Actions picks up the tag, builds the `.msi`, and publishes it to GitHub Releases automatically.
+
+### Branch Strategy
+
+- `main` — stable, production-ready code. Every commit here is releasable.
+- `dev` — active development branch.
+- `feature/xxx` — opened from `dev` for each new feature, merged back into `dev` when done.
+
+When a set of features is ready to ship: merge `dev` into `main`, then run `npm run release`.
