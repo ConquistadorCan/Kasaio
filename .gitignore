@@ -34,3 +34,4 @@ build/
 
 # Tauri
 src-tauri/binaries/
+.tauri

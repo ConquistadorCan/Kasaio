@@ -35,6 +35,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ApiPort(Mutex::new(0)))
         .setup(setup)
         .on_window_event(on_window_event)

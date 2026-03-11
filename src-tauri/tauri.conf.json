@@ -22,9 +22,7 @@
     }
   },
   "bundle": {
-    "externalBin": [
-      "binaries/python-sidecar"
-    ],
+    "externalBin": ["binaries/python-sidecar"],
     "active": true,
     "targets": "all",
     "icon": [
@@ -40,6 +38,11 @@
   "plugins": {
     "shell": {
       "open": false
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERERTk5QzZFNzgxNTE5QTMKUldTakdSVjRicHpwM2FCV3B5YmlHNlFPT3hiNUdFdUQ4SGdKR1ViSUlUUThHMFY5Ti92QTRId3cK",
+      "endpoints": "https://github.com/ConquistadorCan/Kasaio/releases/latest/download/latest.json",
+      "dialog": false
     }
   }
 }
