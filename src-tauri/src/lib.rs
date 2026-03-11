@@ -183,5 +183,14 @@ mod release {
         if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
             let _ = child.kill();
         }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/T", "/IM", "python-sidecar.exe"])
+            .creation_flags(0x08000000)
+            .output();
     }
+}
 }
