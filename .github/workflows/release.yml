@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Install Python dependencies
+        run: |
+          cd src-backend
+          pip install -r requirements.txt
+
+      - name: Build Python sidecar
+        run: |
+          cd src-backend
+          python -m PyInstaller --onefile --name python-sidecar --hidden-import=aiosqlite main.py
+          copy dist\python-sidecar.exe ..\src-tauri\binaries\python-sidecar-x86_64-pc-windows-msvc.exe
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/msi/*.msi
