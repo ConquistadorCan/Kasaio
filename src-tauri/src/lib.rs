@@ -9,14 +9,14 @@ fn get_api_port(state: State<ApiPort>) -> u16 {
 }
 
 #[tauri::command]
-fn log_frontend_error(app: tauri::AppHandle, message: String) {
+fn log_frontend_error(_app: tauri::AppHandle, message: String) {
     #[cfg(debug_assertions)]
     eprintln!("[kasaio:frontend] {}", message);
 
     #[cfg(not(debug_assertions))]
     {
         use std::io::Write;
-        if let Ok(data_dir) = app.path().app_data_dir() {
+        if let Ok(data_dir) = _app.path().app_data_dir() {
             let log_dir = data_dir.join("logs");
             let _ = std::fs::create_dir_all(&log_dir);
             if let Ok(mut file) = std::fs::OpenOptions::new()
