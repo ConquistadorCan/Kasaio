@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "release": "node scripts/release.js",
     "build:all": "cd src-backend && venv\\Scripts\\python.exe -m PyInstaller --onefile --name python-sidecar --hidden-import=aiosqlite main.py && copy dist\\python-sidecar.exe ..\\src-tauri\\binaries\\python-sidecar-x86_64-pc-windows-msvc.exe && cd .. && npm run tauri build"
   },
   "dependencies": {
