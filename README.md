@@ -1,4 +1,4 @@
-# Kasaio
+# kasaio
 
 A desktop application for tracking income and expenses.
 
@@ -10,7 +10,7 @@ A desktop application for tracking income and expenses.
 
 ## Download
 
-Coming soon.
+Download the latest `.msi` installer from [GitHub Releases](https://github.com/ConquistadorCan/Kasaio/releases/latest).
 
 ## Development
 
