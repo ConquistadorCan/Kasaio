@@ -2,6 +2,12 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [1.1.0] - 2026-03-11
+
+### Added
+
+- Auto-updater: the app now checks for updates on launch and prompts the user to install if a new version is available
+
 ## [1.0.1] - 2026-03-11
 
 ### Fixed
