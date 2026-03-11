@@ -38,6 +38,7 @@ jobs:
         run: |
           cd src-backend
           python -m PyInstaller --onefile --name python-sidecar --hidden-import=aiosqlite main.py
+          mkdir ..\src-tauri\binaries
           copy dist\python-sidecar.exe ..\src-tauri\binaries\python-sidecar-x86_64-pc-windows-msvc.exe
 
       - name: Build Tauri app
