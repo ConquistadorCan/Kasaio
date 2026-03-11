@@ -2,6 +2,12 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [1.1.2] - 2026-03-11
+
+### Fixed
+
+- Auto-updater now correctly generates and signs artifacts during release build
+
 ## [1.1.1] - 2026-03-11
 
 ### Fixed
