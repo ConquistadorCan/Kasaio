@@ -1,18 +1,10 @@
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from schemas.transaction_schemas import TransactionCreateSchema, TransactionUpdateSchema
 from models.transaction import Transaction
 
-
-async def get_transactions(db: AsyncSession) -> list[Transaction]:
-    result = await db.execute(select(Transaction))
-    return result.scalars().all()
-
-
 async def get_transaction(db: AsyncSession, transaction_id: int) -> Transaction | None:
-    result = await db.execute(select(Transaction).where(Transaction.id == transaction_id))
-    return result.scalar_one_or_none()
+    return await db.get(Transaction, transaction_id)
 
 
 async def create_transaction(db: AsyncSession, data: TransactionCreateSchema) -> Transaction:
