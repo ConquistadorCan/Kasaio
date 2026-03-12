@@ -20,13 +20,18 @@ export function AppLayout() {
 
   if (!ready) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 h-screen bg-[#08080e]">
-        <img
-          src={logoNobg}
-          alt="Kasaio"
-          className="w-16 h-16 object-contain opacity-80"
-        />
-        <p className="text-sm text-white/20">Starting...</p>
+      <div className="flex flex-col items-center justify-center gap-6 h-screen bg-[#08080e]">
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src={logoNobg}
+            alt="Kasaio"
+            className="w-16 h-16 object-contain"
+          />
+          <span className="text-xl font-semibold tracking-tight text-white">
+            kasa<span className="text-violet-400">io</span>
+          </span>
+        </div>
+        <div className="w-5 h-5 rounded-full border-2 border-white/10 border-t-violet-500 animate-spin" />
       </div>
     );
   }

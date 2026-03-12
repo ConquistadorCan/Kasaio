@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { getVersion } from "@tauri-apps/api/app";
 import logoNobg from "../../assets/logo-nobg.png";
 import {
   LayoutDashboard,
@@ -68,6 +69,11 @@ const NAV_ITEMS: TopLevelNav[] = [
 
 export function Sidebar({ open, onToggle }: SidebarProps) {
   const [openGroups, setOpenGroups] = useState<string[]>(["cash-flow"]);
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    getVersion().then(setVersion);
+  }, []);
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) =>
@@ -219,7 +225,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
             open ? "opacity-100" : "opacity-0",
           )}
         >
-          v0.1.0
+          v{version}
         </span>
       </div>
     </aside>

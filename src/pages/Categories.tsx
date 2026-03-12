@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Trash2, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { categoriesApi } from "../api/categories";
 import { useAppStore } from "../store/useAppStore";
+import { logError } from "../lib/logger";
+import {
+  ErrorState,
+  ErrorBanner,
+  LoadingState,
+} from "../components/ui/ErrorComponents";
 import type { Category } from "../types";
 import { cn } from "../lib/utils";
 
@@ -13,21 +20,29 @@ const EMPTY_FORM: CategoryFormData = { name: "" };
 
 interface CategoryModalProps {
   initial?: CategoryFormData;
-  onSubmit: (data: CategoryFormData) => void;
+  onSubmit: (data: CategoryFormData) => Promise<string | undefined>;
   onClose: () => void;
   loading: boolean;
 }
 
-function CategoryModal({ initial = EMPTY_FORM, onSubmit, onClose, loading }: CategoryModalProps) {
+function CategoryModal({
+  initial = EMPTY_FORM,
+  onSubmit,
+  onClose,
+  loading,
+}: CategoryModalProps) {
   const [form, setForm] = useState<CategoryFormData>(initial);
-  const [error, setError] = useState("");
+  const [fieldError, setFieldError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.name.trim()) {
-      setError("Name is required");
+      setFieldError("Name is required");
       return;
     }
-    onSubmit(form);
+    setSubmitError("");
+    const err = await onSubmit(form);
+    if (err) setSubmitError(err);
   }
 
   return (
@@ -38,23 +53,29 @@ function CategoryModal({ initial = EMPTY_FORM, onSubmit, onClose, loading }: Cat
         </h2>
 
         <div>
-          <label className="block text-xs font-medium text-white/50 mb-1.5">Name</label>
+          <label className="block text-xs font-medium text-white/50 mb-1.5">
+            Name
+          </label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => {
               setForm({ name: e.target.value });
-              setError("");
+              setFieldError("");
+              setSubmitError("");
             }}
             placeholder="e.g. Food & Drink"
             className={cn(
               "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors",
-              error
+              fieldError
                 ? "border-red-500/40 focus:border-red-500/60"
-                : "border-white/[0.08] focus:border-violet-500/50"
+                : "border-white/[0.08] focus:border-violet-500/50",
             )}
           />
-          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+          {fieldError && (
+            <p className="text-xs text-red-400 mt-1">{fieldError}</p>
+          )}
+          {submitError && <ErrorBanner message={submitError} />}
         </div>
 
         <div className="flex gap-2 mt-6">
@@ -79,47 +100,67 @@ function CategoryModal({ initial = EMPTY_FORM, onSubmit, onClose, loading }: Cat
 }
 
 export function Categories() {
-  const { categories, setCategories, addCategory, updateCategory, deleteCategory } = useAppStore();
+  const {
+    categories,
+    setCategories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+  } = useAppStore();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [mutating, setMutating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const data = await categoriesApi.list();
-        setCategories(data);
-      } catch {
-        setFetchError("Failed to load categories.");
-      }
+  const fetchCategories = useCallback(async () => {
+    setFetchError(null);
+    setLoading(true);
+    try {
+      const data = await categoriesApi.list();
+      setCategories(data);
+    } catch (err) {
+      await logError("Failed to load categories", err);
+      setFetchError("Failed to load categories.");
+    } finally {
+      setLoading(false);
     }
-
-    fetchCategories();
   }, [setCategories]);
 
-  async function handleAdd(data: CategoryFormData) {
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  async function handleAdd(
+    data: CategoryFormData,
+  ): Promise<string | undefined> {
     setMutating(true);
     try {
       const created = await categoriesApi.create({ name: data.name });
       addCategory(created);
       setShowModal(false);
-    } catch {
-      // TODO: show inline error
+    } catch (err) {
+      await logError("Failed to add category", err);
+      return "Failed to add category. Please try again.";
     } finally {
       setMutating(false);
     }
   }
 
-  async function handleEdit(data: CategoryFormData) {
+  async function handleEdit(
+    data: CategoryFormData,
+  ): Promise<string | undefined> {
     if (!editing) return;
     setMutating(true);
     try {
-      const updated = await categoriesApi.update(editing.id, { name: data.name });
+      const updated = await categoriesApi.update(editing.id, {
+        name: data.name,
+      });
       updateCategory(editing.id, updated);
       setEditing(null);
-    } catch {
-      // TODO: show inline error
+    } catch (err) {
+      await logError("Failed to update category", err);
+      return "Failed to update category. Please try again.";
     } finally {
       setMutating(false);
     }
@@ -129,8 +170,9 @@ export function Categories() {
     try {
       await categoriesApi.delete(id);
       deleteCategory(id);
-    } catch {
-      // TODO: show inline error
+    } catch (err) {
+      await logError("Failed to delete category", err);
+      toast.error("Failed to delete category.");
     }
   }
 
@@ -139,7 +181,9 @@ export function Categories() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white">Categories</h1>
-          <p className="text-sm text-white/40 mt-0.5">{categories.length} total</p>
+          <p className="text-sm text-white/40 mt-0.5">
+            {categories.length} total
+          </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -150,10 +194,10 @@ export function Categories() {
         </button>
       </div>
 
-      {fetchError ? (
-        <div className="flex-1 flex items-center justify-center bg-[#0e0e18] border border-white/5 rounded-xl">
-          <p className="text-sm text-red-400">{fetchError}</p>
-        </div>
+      {loading ? (
+        <LoadingState />
+      ) : fetchError ? (
+        <ErrorState message={fetchError} onRetry={fetchCategories} />
       ) : categories.length === 0 ? (
         <div className="flex-1 flex items-center justify-center bg-[#0e0e18] border border-white/5 rounded-xl">
           <p className="text-sm text-white/20">No categories yet</p>
@@ -165,7 +209,9 @@ export function Categories() {
               key={category.id}
               className="flex items-center justify-between bg-[#0e0e18] border border-white/5 rounded-xl px-4 py-3.5 hover:border-white/10 transition-colors group"
             >
-              <span className="text-sm text-white font-medium">{category.name}</span>
+              <span className="text-sm text-white font-medium">
+                {category.name}
+              </span>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditing(category)}
