@@ -6,7 +6,11 @@ import { ChevronDown, CalendarIcon } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
 import { cn } from "../../lib/utils";
 import { ErrorBanner } from "../ui/ErrorComponents";
-import { EMPTY_FORM, type TransactionFormData } from "./types";
+import {
+  EMPTY_FORM,
+  DAY_PICKER_CLASS_NAMES,
+  type TransactionFormData,
+} from "./types";
 import type { TransactionType } from "../../types";
 
 interface TransactionModalProps {
@@ -252,26 +256,7 @@ export function TransactionModal({
                         field("date", local.toISOString().split("T")[0]);
                       }
                     }}
-                    classNames={{
-                      root: "text-white/80 text-sm",
-                      months: "flex flex-col",
-                      month: "space-y-3",
-                      month_caption: "hidden",
-                      month_grid: "w-full border-collapse",
-                      weekdays: "flex",
-                      weekday:
-                        "w-8 h-8 flex items-center justify-center text-[11px] text-white/20 font-medium",
-                      weeks: "flex flex-col gap-0.5",
-                      week: "flex",
-                      day: "w-8 h-8 flex items-center justify-center",
-                      day_button:
-                        "w-8 h-8 flex items-center justify-center rounded-lg text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors outline-none",
-                      selected: "bg-violet-500/20 rounded-lg",
-                      today:
-                        "bg-red-500/20 rounded-lg text-red-400 font-medium",
-                      outside: "opacity-20",
-                      disabled: "opacity-20 cursor-not-allowed",
-                    }}
+                    classNames={DAY_PICKER_CLASS_NAMES}
                   />
                 </PopoverPrimitive.Content>
               </PopoverPrimitive.Portal>
