@@ -1,14 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { categoriesApi } from "../api/categories";
 import { useAppStore } from "../store/useAppStore";
 import { logError } from "../lib/logger";
-import {
-  ErrorState,
-  ErrorBanner,
-  LoadingState,
-} from "../components/ui/ErrorComponents";
+import { ErrorBanner } from "../components/ui/ErrorComponents";
 import type { Category } from "../types";
 import { cn } from "../lib/utils";
 
@@ -100,36 +96,11 @@ function CategoryModal({
 }
 
 export function Categories() {
-  const {
-    categories,
-    setCategories,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-  } = useAppStore();
+  const { categories, addCategory, updateCategory, deleteCategory } =
+    useAppStore();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [mutating, setMutating] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchCategories = useCallback(async () => {
-    setFetchError(null);
-    setLoading(true);
-    try {
-      const data = await categoriesApi.list();
-      setCategories(data);
-    } catch (err) {
-      await logError("Failed to load categories", err);
-      setFetchError("Failed to load categories.");
-    } finally {
-      setLoading(false);
-    }
-  }, [setCategories]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
 
   async function handleAdd(
     data: CategoryFormData,
@@ -194,11 +165,7 @@ export function Categories() {
         </button>
       </div>
 
-      {loading ? (
-        <LoadingState />
-      ) : fetchError ? (
-        <ErrorState message={fetchError} onRetry={fetchCategories} />
-      ) : categories.length === 0 ? (
+      {categories.length === 0 ? (
         <div className="flex-1 flex items-center justify-center bg-[#0e0e18] border border-white/5 rounded-xl">
           <p className="text-sm text-white/20">No categories yet</p>
         </div>

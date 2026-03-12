@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { transactionsApi } from "../../api/transactions";
@@ -7,7 +7,6 @@ import { logError } from "../../lib/logger";
 import { TransactionModal } from "../../components/transactions/TransactionModal";
 import { TransactionTable } from "../../components/transactions/TransactionTable";
 import { TransactionFilters } from "../../components/transactions/TransactionFilters";
-import { ErrorState, LoadingState } from "../../components/ui/ErrorComponents";
 import {
   type FilterType,
   type TransactionFormData,
@@ -19,7 +18,6 @@ export function Transactions() {
   const {
     transactions,
     categories,
-    setTransactions,
     addTransaction,
     updateTransaction,
     deleteTransaction,
@@ -30,27 +28,7 @@ export function Transactions() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [mutating, setMutating] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
-
-  const fetchTransactions = useCallback(async () => {
-    setFetchError(null);
-    setLoading(true);
-    try {
-      const data = await transactionsApi.list();
-      setTransactions(data);
-    } catch (err) {
-      await logError("Failed to load transactions", err);
-      setFetchError("Failed to load transactions.");
-    } finally {
-      setLoading(false);
-    }
-  }, [setTransactions]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
 
   const filtered = transactions
     .filter((t) => filter === "all" || t.type === filter)
@@ -167,22 +145,16 @@ export function Transactions() {
         onDateRangeChange={setDateRange}
       />
 
-      {loading ? (
-        <LoadingState />
-      ) : fetchError ? (
-        <ErrorState message={fetchError} onRetry={fetchTransactions} />
-      ) : (
-        <TransactionTable
-          transactions={filtered}
-          sortOrder={sortOrder}
-          onSortToggle={() =>
-            setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
-          }
-          getCategoryName={getCategoryName}
-          onEdit={setEditing}
-          onDelete={handleDelete}
-        />
-      )}
+      <TransactionTable
+        transactions={filtered}
+        sortOrder={sortOrder}
+        onSortToggle={() =>
+          setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+        }
+        getCategoryName={getCategoryName}
+        onEdit={setEditing}
+        onDelete={handleDelete}
+      />
 
       {showModal && (
         <TransactionModal

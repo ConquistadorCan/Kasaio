@@ -12,8 +12,24 @@ export function AppLayout() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0a0a0f]">
-        <p className="text-sm text-red-400">{error}</p>
+      <div className="flex flex-col items-center justify-center gap-6 h-screen bg-[#08080e]">
+        <img
+          src={logoNobg}
+          alt="Kasaio"
+          className="w-12 h-12 object-contain opacity-40"
+        />
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-sm font-medium text-white/60">Failed to start</p>
+          <p className="text-xs text-white/25 max-w-xs leading-relaxed">
+            {error}
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70 border border-white/5 transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
