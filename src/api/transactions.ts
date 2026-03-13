@@ -10,9 +10,9 @@ interface TransactionCreatePayload {
 }
 
 interface TransactionUpdatePayload {
-  amount?: number | null;
-  type?: TransactionType | null;
-  date?: string | null;
+  amount?: number;
+  type?: TransactionType;
+  date?: string;
   description?: string | null;
   category_id?: number | null;
 }
