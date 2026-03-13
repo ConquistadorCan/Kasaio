@@ -5,7 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
 import { Categories } from "./pages/Categories";
 
-export default function App() {
+export function App() {
   return (
     <>
       <Toaster

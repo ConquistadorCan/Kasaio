@@ -10,7 +10,6 @@ from schemas.transaction_schemas import (
 from services.transaction_service import (
     create_transaction,
     delete_transaction,
-    get_transaction,
     get_transactions,
     update_transaction,
 )
@@ -21,14 +20,6 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 @router.get("/", response_model=list[TransactionResponseSchema])
 async def list_transactions(db: AsyncSession = Depends(get_db)):
     return await get_transactions(db)
-
-
-@router.get("/{transaction_id}", response_model=TransactionResponseSchema)
-async def retrieve_transaction(transaction_id: int, db: AsyncSession = Depends(get_db)):
-    transaction = await get_transaction(db, transaction_id)
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return transaction
 
 
 @router.post("/", response_model=TransactionResponseSchema, status_code=201)
