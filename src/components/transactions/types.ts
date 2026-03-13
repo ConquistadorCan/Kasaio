@@ -60,19 +60,3 @@ export const TYPE_BADGE: Record<
     className: "bg-red-500/10 text-red-400 border border-red-500/20",
   },
 };
-
-export function formatAmount(amount: number, type: TransactionType): string {
-  const formatted = new Intl.NumberFormat("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-  return type === "income" ? `+ ₺${formatted}` : `− ₺${formatted}`;
-}
-
-export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateStr));
-}

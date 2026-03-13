@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { Pencil, Trash2, ArrowUp } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { TYPE_BADGE, formatAmount, formatDate } from "./types";
+import { formatAmount, formatDate } from "../../lib/formatters";
+import { TYPE_BADGE } from "./types";
 import type { Transaction } from "../../types";
 
 interface TransactionTableProps {

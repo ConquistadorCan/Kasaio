@@ -11,24 +11,9 @@ import {
   Cell,
 } from "recharts";
 import { useAppStore } from "../store/useAppStore";
+import { formatCurrency, formatDateShort } from "../lib/formatters";
 import type { TransactionType } from "../types";
 import { cn } from "../lib/utils";
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-  }).format(new Date(dateStr));
-}
 
 function getLast6Months(): { key: string; label: string }[] {
   const months = [];
@@ -315,7 +300,9 @@ export function Dashboard() {
                 />
                 <div>
                   <p className="text-sm text-white">{t.description ?? "—"}</p>
-                  <p className="text-xs text-white/30">{formatDate(t.date)}</p>
+                  <p className="text-xs text-white/30">
+                    {formatDateShort(t.date)}
+                  </p>
                 </div>
               </div>
               <span
