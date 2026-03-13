@@ -83,14 +83,15 @@ kasaio/
 
 ## Build
 
-The build process has two stages handled by a single command:
+The canonical build path is CI — every release is built and published automatically by GitHub Actions when a version tag is pushed. See [Cutting a Release](#cutting-a-release).
 
-1. **Package the Python backend** — PyInstaller bundles `src-backend/main.py` and all its dependencies into a standalone `python-sidecar.exe`, then copies it into `src-tauri/binaries/` so Tauri can embed it.
-2. **Build the Tauri application** — Tauri compiles the Rust shell, bundles the frontend, and produces the final installer.
+For local testing, a convenience script is available. It packages the Python backend with PyInstaller, copies the binary into `src-tauri/binaries/`, and runs `tauri build`:
 
 ```bash
 npm run build:all
 ```
+
+> **Note:** `build:all` is Windows-only and intended for local verification. Do not use it to produce release artifacts — use `npm run release` instead.
 
 The `.msi` installer will be available at `src-tauri/target/release/bundle/msi/`.
 
