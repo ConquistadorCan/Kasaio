@@ -14,6 +14,7 @@ import {
 import type { TransactionType } from "../../types";
 
 interface TransactionModalProps {
+  mode: "add" | "edit";
   initial?: TransactionFormData;
   onSubmit: (data: TransactionFormData) => Promise<string | undefined>;
   onClose: () => void;
@@ -21,6 +22,7 @@ interface TransactionModalProps {
 }
 
 export function TransactionModal({
+  mode,
   initial = EMPTY_FORM,
   onSubmit,
   onClose,
@@ -57,7 +59,7 @@ export function TransactionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <h2 className="text-base font-semibold text-white mb-5">
-          {initial === EMPTY_FORM ? "Add Transaction" : "Edit Transaction"}
+          {mode === "add" ? "Add Transaction" : "Edit Transaction"}
         </h2>
 
         <div className="flex flex-col gap-4">

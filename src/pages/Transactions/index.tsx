@@ -158,6 +158,7 @@ export function Transactions() {
 
       {showModal && (
         <TransactionModal
+          mode="add"
           onSubmit={handleAdd}
           onClose={() => setShowModal(false)}
           loading={mutating}
@@ -165,6 +166,7 @@ export function Transactions() {
       )}
       {editing && editingFormData && (
         <TransactionModal
+          mode="edit"
           initial={editingFormData}
           onSubmit={handleEdit}
           onClose={() => setEditing(null)}

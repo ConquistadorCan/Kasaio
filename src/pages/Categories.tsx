@@ -15,6 +15,7 @@ interface CategoryFormData {
 const EMPTY_FORM: CategoryFormData = { name: "" };
 
 interface CategoryModalProps {
+  mode: "add" | "edit";
   initial?: CategoryFormData;
   onSubmit: (data: CategoryFormData) => Promise<string | undefined>;
   onClose: () => void;
@@ -22,6 +23,7 @@ interface CategoryModalProps {
 }
 
 function CategoryModal({
+  mode,
   initial = EMPTY_FORM,
   onSubmit,
   onClose,
@@ -45,7 +47,7 @@ function CategoryModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <h2 className="text-base font-semibold text-white mb-5">
-          {initial === EMPTY_FORM ? "Add Category" : "Edit Category"}
+          {mode === "add" ? "Add Category" : "Edit Category"}
         </h2>
 
         <div>
@@ -200,6 +202,7 @@ export function Categories() {
 
       {showModal && (
         <CategoryModal
+          mode="add"
           onSubmit={handleAdd}
           onClose={() => setShowModal(false)}
           loading={mutating}
@@ -207,6 +210,7 @@ export function Categories() {
       )}
       {editing && (
         <CategoryModal
+          mode="edit"
           initial={{ name: editing.name }}
           onSubmit={handleEdit}
           onClose={() => setEditing(null)}
