@@ -3,6 +3,7 @@ import { Pencil, Trash2, ArrowUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { formatAmount, formatDate } from "../../lib/formatters";
 import { TYPE_BADGE } from "./types";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import type { Transaction } from "../../types";
 
 interface TransactionTableProps {
@@ -23,6 +24,7 @@ export function TransactionTable({
   onDelete,
 }: TransactionTableProps) {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function handleScroll() {
@@ -125,7 +127,7 @@ export function TransactionTable({
                     <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => onDelete(t.id)}
+                    onClick={() => setConfirmId(t.id)}
                     className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <Trash2 size={13} />
@@ -149,6 +151,18 @@ export function TransactionTable({
       >
         <ArrowUp size={16} className="shrink-0" />
       </button>
+
+      {confirmId !== null && (
+        <ConfirmDialog
+          title="Delete transaction?"
+          description="This action cannot be undone."
+          onConfirm={() => {
+            onDelete(confirmId);
+            setConfirmId(null);
+          }}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
     </div>
   );
 }

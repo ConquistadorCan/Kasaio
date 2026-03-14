@@ -5,6 +5,7 @@ import { categoriesApi } from "../api/categories";
 import { useAppStore } from "../store/useAppStore";
 import { logError } from "../lib/logger";
 import { ErrorBanner } from "../components/ui/ErrorComponents";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import type { Category } from "../types";
 import { cn } from "../lib/utils";
 
@@ -103,6 +104,7 @@ export function Categories() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [mutating, setMutating] = useState(false);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   async function handleAdd(
     data: CategoryFormData,
@@ -189,7 +191,7 @@ export function Categories() {
                   <Pencil size={13} />
                 </button>
                 <button
-                  onClick={() => handleDelete(category.id)}
+                  onClick={() => setConfirmId(category.id)}
                   className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 size={13} />
@@ -215,6 +217,17 @@ export function Categories() {
           onSubmit={handleEdit}
           onClose={() => setEditing(null)}
           loading={mutating}
+        />
+      )}
+      {confirmId !== null && (
+        <ConfirmDialog
+          title="Delete category?"
+          description="This action cannot be undone."
+          onConfirm={() => {
+            handleDelete(confirmId);
+            setConfirmId(null);
+          }}
+          onCancel={() => setConfirmId(null)}
         />
       )}
     </div>
