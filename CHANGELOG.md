@@ -2,6 +2,18 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [1.2.0] - 2026-03-15
+
+### Added
+
+- Delete confirmation dialog for transactions
+- Splash screen on app launch
+- Improved error handling with user-facing messages
+
+### Fixed
+
+- Transaction update not saving correctly
+
 ## [1.1.2] - 2026-03-11
 
 ### Fixed
