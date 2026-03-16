@@ -1,7 +1,6 @@
-
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from models.transaction import TransactionTypeEnum
 
@@ -13,6 +12,13 @@ class TransactionCreateSchema(BaseModel):
     date: datetime
     category_id: int | None = None
 
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("amount must be greater than 0")
+        return v
+
 
 class TransactionUpdateSchema(BaseModel):
     amount: float | None = None
@@ -20,6 +26,13 @@ class TransactionUpdateSchema(BaseModel):
     description: str | None = None
     date: datetime | None = None
     category_id: int | None = None
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_positive(cls, v: float | None) -> float | None:
+        if v is not None and v <= 0:
+            raise ValueError("amount must be greater than 0")
+        return v
 
     @model_validator(mode="after")
     def required_fields_not_none(self) -> "TransactionUpdateSchema":
