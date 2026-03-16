@@ -1,5 +1,5 @@
 import enum
 
 class TransactionTypeEnum(enum.Enum):
-    INCOME = "income"
-    EXPENSE = "expense"
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
