@@ -12,7 +12,6 @@ class Asset(Base):
     symbol: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(nullable=False)
-    currency: Mapped[str] = mapped_column(String(10), nullable=False)
 
     investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(
         "InvestmentTransaction", back_populates="asset"
