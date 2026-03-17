@@ -4,6 +4,10 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
 import { Categories } from "./pages/Categories";
+import { InvestmentsPortfolio } from "./pages/Investments/index";
+import { Commodities } from "./pages/Investments/Commodities";
+import { InvestmentTransactions } from "./pages/Investments/Transactions";
+import { PriceUpdate } from "./pages/Investments/PriceUpdate";
 
 export function App() {
   return (
@@ -25,6 +29,10 @@ export function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="cash-flow/transactions" element={<Transactions />} />
           <Route path="cash-flow/categories" element={<Categories />} />
+          <Route path="investments/portfolio" element={<InvestmentsPortfolio />} />
+          <Route path="investments/commodities" element={<Commodities />} />
+          <Route path="investments/transactions" element={<InvestmentTransactions />} />
+          <Route path="investments/price-update" element={<PriceUpdate />} />
         </Route>
       </Routes>
     </>
