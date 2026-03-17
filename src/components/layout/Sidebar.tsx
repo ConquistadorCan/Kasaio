@@ -12,6 +12,10 @@ import {
   Wallet,
   PanelLeftClose,
   PanelLeftOpen,
+  BarChart2,
+  Gem,
+  Receipt,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -50,11 +54,7 @@ const NAV_ITEMS: TopLevelNav[] = [
     icon: Wallet,
     enabled: true,
     items: [
-      {
-        label: "Transactions",
-        path: "/cash-flow/transactions",
-        icon: ArrowLeftRight,
-      },
+      { label: "Transactions", path: "/cash-flow/transactions", icon: ArrowLeftRight },
       { label: "Categories", path: "/cash-flow/categories", icon: Tag },
     ],
   },
@@ -62,13 +62,18 @@ const NAV_ITEMS: TopLevelNav[] = [
     id: "investments",
     label: "Investments",
     icon: TrendingUp,
-    enabled: false,
-    items: [],
+    enabled: true,
+    items: [
+      { label: "Portfolio", path: "/investments/portfolio", icon: BarChart2 },
+      { label: "Commodities", path: "/investments/commodities", icon: Gem },
+      { label: "Transactions", path: "/investments/transactions", icon: Receipt },
+      { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
+    ],
   },
 ];
 
 export function Sidebar({ open, onToggle }: SidebarProps) {
-  const [openGroups, setOpenGroups] = useState<string[]>(["cash-flow"]);
+  const [openGroups, setOpenGroups] = useState<string[]>(["cash-flow", "investments"]);
   const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
@@ -77,7 +82,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
   }
 
@@ -85,22 +90,16 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
     <aside
       className={cn(
         "shrink-0 flex flex-col h-full bg-[#0d0d14] border-r border-white/5 overflow-hidden transition-all duration-300 ease-in-out",
-        open ? "w-56" : "w-12",
+        open ? "w-56" : "w-12"
       )}
     >
       {/* Header */}
       <div className="px-3 py-4 border-b border-white/5 flex items-center justify-between min-w-0">
-        <div
-          className={cn(
-            "flex items-center gap-2 transition-all duration-300 overflow-hidden",
-            open ? "opacity-100 w-auto" : "opacity-0 w-0",
-          )}
-        >
-          <img
-            src={logoNobg}
-            alt="Kasaio"
-            className="w-6 h-6 shrink-0 object-contain"
-          />
+        <div className={cn(
+          "flex items-center gap-2 transition-all duration-300 overflow-hidden",
+          open ? "opacity-100 w-auto" : "opacity-0 w-0"
+        )}>
+          <img src={logoNobg} alt="Kasaio" className="w-6 h-6 shrink-0 object-contain" />
           <span className="text-lg font-semibold tracking-tight text-white whitespace-nowrap">
             kasa<span className="text-violet-400">io</span>
           </span>
@@ -130,7 +129,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
                     "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-violet-500/15 text-violet-300"
-                      : "text-white/60 hover:text-white hover:bg-white/5",
+                      : "text-white/60 hover:text-white hover:bg-white/5"
                   )
                 }
               >
@@ -138,7 +137,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
                 <span
                   className={cn(
                     "overflow-hidden whitespace-nowrap transition-all duration-300",
-                    open ? "opacity-100 w-auto" : "opacity-0 w-0",
+                    open ? "opacity-100 w-auto" : "opacity-0 w-0"
                   )}
                 >
                   {item.label}
@@ -150,34 +149,28 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
           return (
             <div key={item.id}>
               <button
-                onClick={() =>
-                  item.enabled && (open ? toggleGroup(item.id) : null)
-                }
+                onClick={() => item.enabled && (open ? toggleGroup(item.id) : null)}
                 disabled={!item.enabled}
                 title={!open ? item.label : undefined}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
                   item.enabled
                     ? "text-white/60 hover:text-white hover:bg-white/5 cursor-pointer"
-                    : "text-white/20 cursor-not-allowed",
+                    : "text-white/20 cursor-not-allowed"
                 )}
               >
                 <Icon size={15} className="shrink-0" />
                 <span
                   className={cn(
                     "flex-1 text-left overflow-hidden whitespace-nowrap transition-all duration-300",
-                    open ? "opacity-100 w-auto" : "opacity-0 w-0",
+                    open ? "opacity-100 w-auto" : "opacity-0 w-0"
                   )}
                 >
                   {item.label}
                 </span>
-                {open &&
-                  item.enabled &&
-                  (isOpen ? (
-                    <ChevronDown size={13} className="shrink-0" />
-                  ) : (
-                    <ChevronRight size={13} className="shrink-0" />
-                  ))}
+                {open && item.enabled && (
+                  isOpen ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />
+                )}
                 {open && !item.enabled && (
                   <span className="text-[10px] bg-white/5 text-white/25 px-1.5 py-0.5 rounded-full shrink-0">
                     soon
@@ -201,7 +194,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
                             "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors",
                             isActive
                               ? "bg-violet-500/15 text-violet-300 font-medium"
-                              : "text-white/50 hover:text-white/80 hover:bg-white/5",
+                              : "text-white/50 hover:text-white/80 hover:bg-white/5"
                           )
                         }
                       >
@@ -222,7 +215,7 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
         <span
           className={cn(
             "text-xs text-white/20 overflow-hidden whitespace-nowrap transition-all duration-300",
-            open ? "opacity-100" : "opacity-0",
+            open ? "opacity-100" : "opacity-0"
           )}
         >
           v{version}

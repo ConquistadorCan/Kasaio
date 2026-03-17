@@ -6,8 +6,11 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from seed import seed
 
 
 def find_free_port() -> int:
@@ -15,19 +18,21 @@ def find_free_port() -> int:
         s.bind(("", 0))
         return s.getsockname()[1]
 
+
 def setup_logging():
-    if not getattr(sys, "frozen", False):
-        return
-    
-    log_dir = Path(os.environ["KASAIO_DATA_DIR"]) / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    
+    log_handlers = []
+
+    if getattr(sys, "frozen", False):
+        log_dir = Path(os.environ["KASAIO_DATA_DIR"]) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_handlers.append(logging.FileHandler(log_dir / "backend.log", encoding="utf-8"))
+    else:
+        log_handlers.append(logging.StreamHandler(sys.stderr))
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[
-            logging.FileHandler(log_dir / "backend.log", encoding="utf-8"),
-        ]
+        handlers=log_handlers,
     )
 
     def handle_exception(exc_type, exc_value, exc_traceback):
@@ -38,13 +43,19 @@ def setup_logging():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create all DB tables on startup if they don't exist yet."""
     from database import engine, Base
-    import models.category  # noqa: F401 — registers the model
-    import models.transaction  # noqa: F401 — registers the model
+    import models.category  # noqa: F401
+    import models.transaction  # noqa: F401
+    import models.holding  # noqa: F401
+    import models.investment_transaction  # noqa: F401
+    import models.asset_price  # noqa: F401
+    import models.asset  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    await seed()
+
     yield
 
 
@@ -54,6 +65,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+logger = logging.getLogger("kasaio")
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error(f"Unexpected error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://tauri.localhost", "tauri://localhost", "http://localhost:1420"],
@@ -62,14 +85,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Include routers ---
-from routers.categories_router import router as categories_router
-from routers.transactions_router import router as transactions_router
-app.include_router(categories_router)
-app.include_router(transactions_router)
+from routers.category_router import router as category_router
+from routers.transaction_router import router as transaction_router
+from routers.holding_router import router as holding_router
+from routers.investment_transaction_router import router as investment_transaction_router
+from routers.asset_price_router import router as asset_price_router
+from routers.asset_router import router as asset_router
+
+app.include_router(category_router)
+app.include_router(transaction_router)
+app.include_router(holding_router)
+app.include_router(investment_transaction_router)
+app.include_router(asset_price_router)
+app.include_router(asset_router)
 
 
-# --- Health check ---
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}

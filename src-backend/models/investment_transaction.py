@@ -17,6 +17,5 @@ class InvestmentTransaction(Base):
     quantity: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
     price: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     asset: Mapped["Asset"] = relationship("Asset", back_populates="investment_transactions")
