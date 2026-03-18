@@ -48,8 +48,8 @@ async def _update_holding(db: AsyncSession, data: InvestmentTransactionCreate) -
         logger.info(f"Holding created: asset_id={data.asset_id} quantity={data.quantity}")
     else:
         if data.transaction_type == InvestmentTransactionType.BUY:
-            total_cost = (holding.quantity * float(holding.average_cost)) + (data.quantity * data.price)
-            holding.quantity += data.quantity
+            total_cost = (float(holding.quantity) * float(holding.average_cost)) + (data.quantity * data.price)
+            holding.quantity = float(holding.quantity) + data.quantity
             holding.average_cost = total_cost / holding.quantity
             logger.info(f"Holding updated (buy): asset_id={data.asset_id} new_quantity={holding.quantity} new_avg_cost={holding.average_cost}")
         elif data.transaction_type == InvestmentTransactionType.SELL:
