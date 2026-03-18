@@ -6,11 +6,7 @@ import { ChevronDown, CalendarIcon } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
 import { cn } from "../../lib/utils";
 import { ErrorBanner } from "../ui/ErrorComponents";
-import {
-  EMPTY_FORM,
-  DAY_PICKER_CLASS_NAMES,
-  type TransactionFormData,
-} from "./types";
+import { EMPTY_FORM, DAY_PICKER_CLASS_NAMES, type TransactionFormData } from "./types";
 import type { TransactionType } from "../../types";
 
 interface TransactionModalProps {
@@ -21,17 +17,15 @@ interface TransactionModalProps {
   loading: boolean;
 }
 
-export function TransactionModal({
-  mode,
-  initial = EMPTY_FORM,
-  onSubmit,
-  onClose,
-  loading,
-}: TransactionModalProps) {
+export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose, loading }: TransactionModalProps) {
   const categories = useAppStore((s) => s.categories);
   const [form, setForm] = useState<TransactionFormData>(initial);
   const [errors, setErrors] = useState<Partial<TransactionFormData>>({});
   const [submitError, setSubmitError] = useState("");
+  const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
+
+  const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
+  const pickerYear = currentPickerDate.getFullYear();
 
   function validate(): boolean {
     const next: Partial<TransactionFormData> = {};
@@ -65,9 +59,7 @@ export function TransactionModal({
         <div className="flex flex-col gap-4">
           {/* Type */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Type
-            </label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Type</label>
             <div className="flex gap-2">
               {(["income", "expense"] as TransactionType[]).map((t) => (
                 <button
@@ -79,7 +71,7 @@ export function TransactionModal({
                       ? t === "income"
                         ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
                         : "bg-red-500/15 text-red-400 border border-red-500/25"
-                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]",
+                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
                   )}
                 >
                   {t}
@@ -104,9 +96,7 @@ export function TransactionModal({
 
           {/* Amount */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Amount (₺)
-            </label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Amount (₺)</label>
             <input
               type="number"
               value={form.amount}
@@ -117,12 +107,10 @@ export function TransactionModal({
                 "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors font-mono",
                 errors.amount
                   ? "border-red-500/40 focus:border-red-500/60"
-                  : "border-white/[0.08] focus:border-violet-500/50",
+                  : "border-white/[0.08] focus:border-violet-500/50"
               )}
             />
-            {errors.amount && (
-              <p className="text-xs text-red-400 mt-1">{errors.amount}</p>
-            )}
+            {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount}</p>}
           </div>
 
           {/* Category */}
@@ -151,22 +139,16 @@ export function TransactionModal({
                       value="none"
                       className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[highlighted]:text-white/70"
                     >
-                      <SelectPrimitive.ItemText>
-                        Uncategorized
-                      </SelectPrimitive.ItemText>
+                      <SelectPrimitive.ItemText>Uncategorized</SelectPrimitive.ItemText>
                     </SelectPrimitive.Item>
-                    {categories.length > 0 && (
-                      <div className="my-1 h-px bg-white/5" />
-                    )}
+                    {categories.length > 0 && <div className="my-1 h-px bg-white/5" />}
                     {categories.map((c) => (
                       <SelectPrimitive.Item
                         key={c.id}
                         value={String(c.id)}
                         className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
                       >
-                        <SelectPrimitive.ItemText>
-                          {c.name}
-                        </SelectPrimitive.ItemText>
+                        <SelectPrimitive.ItemText>{c.name}</SelectPrimitive.ItemText>
                       </SelectPrimitive.Item>
                     ))}
                   </SelectPrimitive.Viewport>
@@ -177,25 +159,19 @@ export function TransactionModal({
 
           {/* Date */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Date
-            </label>
-            <PopoverPrimitive.Root>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Date</label>
+            <PopoverPrimitive.Root onOpenChange={(open) => { if (!open) setPickerView("day"); }}>
               <PopoverPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm outline-none transition-colors",
                   errors.date
                     ? "border-red-500/40 text-red-400"
-                    : "border-white/[0.08] text-white hover:border-white/20",
+                    : "border-white/[0.08] text-white hover:border-white/20"
                 )}
               >
                 <span className={form.date ? "text-white" : "text-white/20"}>
                   {form.date
-                    ? new Intl.DateTimeFormat("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      }).format(new Date(form.date + "T12:00:00"))
+                    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(form.date + "T12:00:00"))
                     : "Pick a date"}
                 </span>
                 <CalendarIcon size={14} className="text-white/30" />
@@ -208,32 +184,34 @@ export function TransactionModal({
                   <div className="flex items-center justify-between mb-3">
                     <button
                       onClick={() => {
-                        const d = new Date(
-                          form.date ? form.date + "T12:00:00" : Date.now(),
-                        );
-                        d.setMonth(d.getMonth() - 1);
+                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                        if (pickerView === "day") d.setMonth(d.getMonth() - 1);
+                        else d.setFullYear(d.getFullYear() - 1);
                         field("date", d.toISOString().split("T")[0]);
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
                     >
                       ‹
                     </button>
-                    <span className="text-sm font-medium text-white">
-                      {new Intl.DateTimeFormat("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      }).format(
-                        form.date
-                          ? new Date(form.date + "T12:00:00")
-                          : new Date(),
-                      )}
-                    </span>
+                    {pickerView === "year" ? (
+                      <span className="text-sm font-medium text-white px-2 py-1">
+                        {`${pickerYear - 6} – ${pickerYear + 5}`}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setPickerView((v) => v === "day" ? "month" : "year")}
+                        className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+                      >
+                        {pickerView === "day"
+                          ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(currentPickerDate)
+                          : pickerYear}
+                      </button>
+                    )}
                     <button
                       onClick={() => {
-                        const d = new Date(
-                          form.date ? form.date + "T12:00:00" : Date.now(),
-                        );
-                        d.setMonth(d.getMonth() + 1);
+                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                        if (pickerView === "day") d.setMonth(d.getMonth() + 1);
+                        else d.setFullYear(d.getFullYear() + 1);
                         field("date", d.toISOString().split("T")[0]);
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
@@ -241,31 +219,86 @@ export function TransactionModal({
                       ›
                     </button>
                   </div>
-                  <DayPicker
-                    mode="single"
-                    month={
-                      form.date ? new Date(form.date + "T12:00:00") : new Date()
-                    }
-                    hideNavigation
-                    selected={
-                      form.date ? new Date(form.date + "T12:00:00") : undefined
-                    }
-                    onSelect={(day) => {
-                      if (day) {
-                        const local = new Date(
-                          day.getTime() - day.getTimezoneOffset() * 60000,
+
+                  {pickerView === "year" ? (
+                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const year = pickerYear - 6 + i;
+                        const isSelected = pickerYear === year;
+                        return (
+                          <button
+                            key={year}
+                            onClick={() => {
+                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                              d.setFullYear(year);
+                              field("date", d.toISOString().split("T")[0]);
+                              setPickerView("month");
+                            }}
+                            className={cn(
+                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                              isSelected
+                                ? "bg-violet-500/30 text-violet-300"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {year}
+                          </button>
                         );
-                        field("date", local.toISOString().split("T")[0]);
-                      }
-                    }}
-                    classNames={DAY_PICKER_CLASS_NAMES}
-                  />
+                      })}
+                    </div>
+                  ) : pickerView === "month" ? (
+                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const label = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
+                        const isSelected = currentPickerDate.getMonth() === i;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                              d.setMonth(i);
+                              field("date", d.toISOString().split("T")[0]);
+                              setPickerView("day");
+                            }}
+                            className={cn(
+                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                              isSelected
+                                ? "bg-violet-500/30 text-violet-300"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <>
+                      <DayPicker
+                        mode="single"
+                        month={currentPickerDate}
+                        hideNavigation
+                        selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
+                        onSelect={(day) => {
+                          if (day) {
+                            const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
+                            field("date", local.toISOString().split("T")[0]);
+                          }
+                        }}
+                        classNames={DAY_PICKER_CLASS_NAMES}
+                      />
+                      <button
+                        onClick={() => field("date", new Date().toISOString().split("T")[0])}
+                        className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+                      >
+                        Today
+                      </button>
+                    </>
+                  )}
                 </PopoverPrimitive.Content>
               </PopoverPrimitive.Portal>
             </PopoverPrimitive.Root>
-            {errors.date && (
-              <p className="text-xs text-red-400 mt-1">{errors.date}</p>
-            )}
+            {errors.date && <p className="text-xs text-red-400 mt-1">{errors.date}</p>}
           </div>
         </div>
 
