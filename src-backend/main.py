@@ -107,6 +107,15 @@ async def health_check():
 
 if __name__ == "__main__":
     setup_logging()
+    
     port = find_free_port()
     print(f"KASAIO_API_PORT={port}", flush=True)
-    uvicorn.run(app, host="127.0.0.1", port=port, access_log=False)
+
+    is_dev = not getattr(sys, "frozen", False)
+    uvicorn.run(
+        "main:app" if is_dev else app,
+        host="127.0.0.1",
+        port=port,
+        access_log=False,
+        reload=is_dev
+    )
