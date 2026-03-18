@@ -4,8 +4,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { DayPicker } from "react-day-picker";
 import { CalendarIcon, ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { DAY_PICKER_CLASS_NAMES } from "../transactions/types";
-import { ErrorBanner } from "../ui/ErrorComponents";
+import { DAY_PICKER_CLASS_NAMES } from "../../components/transactions/types";
+import { ErrorBanner } from "../../components/ui/ErrorComponents";
 import type { Asset } from "../../types/investments";
 
 interface FormData {
@@ -42,6 +42,10 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
+  const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
+
+  const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
+  const pickerYear = currentPickerDate.getFullYear();
 
   function field(key: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -180,7 +184,7 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
           {/* Date */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Date</label>
-            <PopoverPrimitive.Root>
+            <PopoverPrimitive.Root onOpenChange={(open) => { if (!open) setPickerView("day"); }}>
               <PopoverPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm outline-none transition-colors",
@@ -199,39 +203,123 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
                   <div className="flex items-center justify-between mb-3">
                     <button
                       onClick={() => {
-                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                        d.setMonth(d.getMonth() - 1);
-                        field("date", d.toISOString().split("T")[0]);
+                        if (pickerView === "day") {
+                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                          d.setMonth(d.getMonth() - 1);
+                          field("date", d.toISOString().split("T")[0]);
+                        } else {
+                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                          d.setFullYear(d.getFullYear() - 1);
+                          field("date", d.toISOString().split("T")[0]);
+                        }
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
                     >‹</button>
-                    <span className="text-sm font-medium text-white">
-                      {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
-                        form.date ? new Date(form.date + "T12:00:00") : new Date()
-                      )}
-                    </span>
+                    {pickerView === "year" ? (
+                      <span className="text-sm font-medium text-white px-2 py-1">
+                        {`${pickerYear - 6} – ${pickerYear + 5}`}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setPickerView((v) => v === "day" ? "month" : "year")}
+                        className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+                      >
+                        {pickerView === "day"
+                          ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(currentPickerDate)
+                          : pickerYear}
+                      </button>
+                    )}
                     <button
                       onClick={() => {
-                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                        d.setMonth(d.getMonth() + 1);
-                        field("date", d.toISOString().split("T")[0]);
+                        if (pickerView === "day") {
+                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                          d.setMonth(d.getMonth() + 1);
+                          field("date", d.toISOString().split("T")[0]);
+                        } else {
+                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                          d.setFullYear(d.getFullYear() + 1);
+                          field("date", d.toISOString().split("T")[0]);
+                        }
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
                     >›</button>
                   </div>
-                  <DayPicker
-                    mode="single"
-                    month={form.date ? new Date(form.date + "T12:00:00") : new Date()}
-                    hideNavigation
-                    selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
-                    onSelect={(day) => {
-                      if (day) {
-                        const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
-                        field("date", local.toISOString().split("T")[0]);
-                      }
-                    }}
-                    classNames={DAY_PICKER_CLASS_NAMES}
-                  />
+
+                  {pickerView === "year" ? (
+                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const year = pickerYear - 6 + i;
+                        const isSelected = pickerYear === year;
+                        return (
+                          <button
+                            key={year}
+                            onClick={() => {
+                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                              d.setFullYear(year);
+                              field("date", d.toISOString().split("T")[0]);
+                              setPickerView("month");
+                            }}
+                            className={cn(
+                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                              isSelected
+                                ? "bg-violet-500/30 text-violet-300"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {year}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : pickerView === "month" ? (
+                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const label = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
+                        const isSelected = currentPickerDate.getMonth() === i;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                              d.setMonth(i);
+                              field("date", d.toISOString().split("T")[0]);
+                              setPickerView("day");
+                            }}
+                            className={cn(
+                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                              isSelected
+                                ? "bg-violet-500/30 text-violet-300"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <>
+                      <DayPicker
+                        mode="single"
+                        month={currentPickerDate}
+                        hideNavigation
+                        selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
+                        onSelect={(day) => {
+                          if (day) {
+                            const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
+                            field("date", local.toISOString().split("T")[0]);
+                          }
+                        }}
+                        classNames={DAY_PICKER_CLASS_NAMES}
+                      />
+                      <button
+                        onClick={() => field("date", new Date().toISOString().split("T")[0])}
+                        className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+                      >
+                        Today
+                      </button>
+                    </>
+                  )}
                 </PopoverPrimitive.Content>
               </PopoverPrimitive.Portal>
             </PopoverPrimitive.Root>
