@@ -15,6 +15,9 @@ export function InvestmentTransactions() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [mutating, setMutating] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [filterAsset, setFilterAsset] = useState<number | "all">("all");
+  const [filterType, setFilterType] = useState<"BUY" | "SELL" | "all">("all");
 
   const fetchTransactions = useCallback(async () => {
     setFetchError(null);
@@ -61,9 +64,13 @@ export function InvestmentTransactions() {
 
   const commodities = assets.filter((a) => a.asset_type === "COMMODITY");
 
-  const sorted = [...investmentTransactions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  const sorted = [...investmentTransactions]
+    .filter((t) => filterAsset === "all" || t.asset_id === filterAsset)
+    .filter((t) => filterType === "all" || t.transaction_type === filterType)
+    .sort((a, b) => {
+      const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return sortOrder === "desc" ? -diff : diff;
+    });
 
   return (
     <div className="flex flex-col h-full gap-5">
@@ -81,18 +88,72 @@ export function InvestmentTransactions() {
         </button>
       </div>
 
+      <div className="flex items-center gap-3">
+        {/* Type filter */}
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+          {(["all", "BUY", "SELL"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                filterType === t ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+              )}
+            >
+              {t === "all" ? "All" : t}
+            </button>
+          ))}
+        </div>
+
+        {/* Asset filter */}
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+          <button
+            onClick={() => setFilterAsset("all")}
+            className={cn(
+              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+              filterAsset === "all" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+            )}
+          >
+            All
+          </button>
+          {commodities.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setFilterAsset(a.id)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                filterAsset === a.id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+              )}
+            >
+              {a.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
         <LoadingState />
       ) : fetchError ? (
-        <ErrorState message={fetchError} onRetry={fetchTransactions} />
+        <ErrorState message={fetchError!} onRetry={fetchTransactions} />
       ) : (
         <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
           <div className="grid grid-cols-[100px_1fr_80px_110px_110px_120px] px-5 py-3 border-b border-white/5 shrink-0">
-            {["Date", "Asset", "Type", "Qty (g)", "Price", "Total"].map((col) => (
-              <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
-                {col}
-              </span>
-            ))}
+            {["Date", "Asset", "Type", "Qty (g)", "Price", "Total"].map((col) =>
+              col === "Date" ? (
+                <button
+                  key={col}
+                  onClick={() => setSortOrder((prev) => prev === "desc" ? "asc" : "desc")}
+                  className="flex items-center gap-1 text-[11px] font-medium text-white/30 uppercase tracking-wider hover:text-white/60 transition-colors"
+                >
+                  Date
+                  <span className="text-[10px]">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                </button>
+              ) : (
+                <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
+                  {col}
+                </span>
+              )
+            )}
           </div>
 
           {sorted.length === 0 ? (
