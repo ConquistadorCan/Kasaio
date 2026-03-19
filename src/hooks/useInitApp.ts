@@ -6,11 +6,12 @@ import { transactionsApi } from "../api/transactions";
 import { categoriesApi } from "../api/categories";
 import { assetsApi } from "../api/assets";
 import { holdingsApi } from "../api/holdings";
+import { assetPricesApi } from "../api/assetPrices";
 import { logError } from "../lib/logger";
 
 export function useInitApp() {
   const { setApiPort, setTransactions, setCategories } = useAppStore();
-  const { setAssets, setHoldings } = useInvestmentStore();
+  const { setAssets, setHoldings, setLatestPrice } = useInvestmentStore();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +32,17 @@ export function useInitApp() {
         setAssets(assets);
         setHoldings(holdings);
 
+        await Promise.all(
+          assets.map(async (a) => {
+            try {
+              const latest = await assetPricesApi.latest(a.id);
+              setLatestPrice(a.id, latest);
+            } catch {
+              // asset has no price yet, not an error worth logging
+            }
+          })
+        );
+
         setReady(true);
       } catch (err) {
         await logError("Failed to initialize app", err);
@@ -39,7 +51,7 @@ export function useInitApp() {
     }
 
     init();
-  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings]);
+  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice]);
 
   return { ready, error };
 }
