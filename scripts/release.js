@@ -65,25 +65,30 @@ packageJson.version = newVersion;
 writeFileSync("package.json", JSON.stringify(packageJson, null, 2) + "\n");
 
 // 6. Update tauri.conf.json
-const tauriConf = JSON.parse(
-  readFileSync("src-tauri/tauri.conf.json", "utf-8"),
-);
+const tauriConf = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf-8"));
 tauriConf.version = newVersion;
-writeFileSync(
-  "src-tauri/tauri.conf.json",
-  JSON.stringify(tauriConf, null, 2) + "\n",
-);
+writeFileSync("src-tauri/tauri.conf.json", JSON.stringify(tauriConf, null, 2) + "\n");
+
+// 7. Update Cargo.toml
+let cargoToml = readFileSync("src-tauri/Cargo.toml", "utf-8");
+cargoToml = cargoToml.replace(/^version = ".*"/m, `version = "${newVersion}"`);
+writeFileSync("src-tauri/Cargo.toml", cargoToml);
+
+// 8. Update main.py
+let mainPy = readFileSync("src-backend/main.py", "utf-8");
+mainPy = mainPy.replace(/version="[^"]*"/, `version="${newVersion}"`);
+writeFileSync("src-backend/main.py", mainPy);
 
 console.log(`Version bumped: ${currentVersion} → ${newVersion}`);
 
-// 7. Commit version bump
-run("git add package.json src-tauri/tauri.conf.json");
+// 9. Commit version bump
+run("git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-backend/main.py");
 run(`git commit -m "chore: bump version to ${newVersion}"`);
 
-// 8. Create tag
+// 10. Create tag
 run(`git tag v${newVersion}`);
 
-// 9. Push
+// 11. Push
 run("git push origin main");
 run(`git push origin v${newVersion}`);
 
