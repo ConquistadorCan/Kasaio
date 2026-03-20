@@ -2,6 +2,7 @@ use std::sync::Mutex;
 use tauri::{Manager, State};
 
 pub struct ApiPort(pub Mutex<u16>);
+pub struct BackendReady(pub Mutex<bool>);
 
 #[tauri::command]
 fn get_api_port(state: State<ApiPort>) -> u16 {
@@ -30,16 +31,72 @@ fn log_frontend_error(_app: tauri::AppHandle, message: String) {
     }
 }
 
+// Called by React when it has set up its event listener and is ready to receive backend-ready
+#[tauri::command]
+fn frontend_ready(app: tauri::AppHandle) {
+    use tauri::Emitter;
+    let port = *app.state::<ApiPort>().0.lock().unwrap();
+    let backend_ready = *app.state::<BackendReady>().0.lock().unwrap();
+    eprintln!("[kasaio] frontend ready, backend_ready={}, port={}", backend_ready, port);
+
+    if backend_ready && port != 0 {
+        let _ = app.emit("backend_ready", port);
+        eprintln!("[kasaio] emitting backend_ready event");
+    } else {
+        *app.state::<BackendReady>().0.lock().unwrap() = false;
+        eprintln!("[kasaio] frontend ready, but backend is not ready");
+    }
+}
+
+async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
+    use tauri::Emitter;
+    let health_url = format!("http://127.0.0.1:{}/health", port);
+    let max_attempts = 5;
+
+    for attempt in 1..=max_attempts {
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        if let Ok(resp) = reqwest::get(&health_url).await {
+            if resp.status().is_success() {
+                *handle.state::<ApiPort>().0.lock().unwrap() = port;
+                *handle.state::<BackendReady>().0.lock().unwrap() = true;
+                let _ = handle.emit("backend-ready", port);
+                eprintln!("[kasaio] backend ready on port {}", port);
+                return;
+            }
+        }
+        eprintln!("[kasaio] health check attempt {}/{} failed", attempt, max_attempts);
+    }
+
+    let msg = format!("Backend failed to start after {} attempts on port {}", max_attempts, port);
+    eprintln!("[kasaio] {}", msg);
+
+    #[cfg(not(debug_assertions))]
+    if let Ok(data_dir) = handle.path().app_data_dir() {
+        use std::io::Write;
+        let log_dir = data_dir.join("logs");
+        let _ = std::fs::create_dir_all(&log_dir);
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_dir.join("backend.log"))
+        {
+            let _ = writeln!(file, "[ERROR] {}", msg);
+        }
+    }
+
+    let _ = handle.emit("backend_failed", msg);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(ApiPort(Mutex::new(0)))
+        .manage(BackendReady(Mutex::new(false)))
         .setup(setup)
         .on_window_event(on_window_event)
-        .invoke_handler(tauri::generate_handler![get_api_port, log_frontend_error])
+        .invoke_handler(tauri::generate_handler![get_api_port, log_frontend_error, frontend_ready])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -70,10 +127,10 @@ fn on_window_event(window: &tauri::Window, event: &tauri::WindowEvent) {
 // Dev mode — spawns venv Python directly so sys.frozen is False
 #[cfg(debug_assertions)]
 mod dev {
-    use super::ApiPort;
+    use super::wait_for_backend;
     use std::io::{BufRead, BufReader};
     use std::sync::Mutex;
-    use tauri::{Emitter, Manager};
+    use tauri::Manager;
 
     pub struct Child(pub Mutex<Option<std::process::Child>>);
 
@@ -108,10 +165,13 @@ mod dev {
         let handle = app.handle().clone();
         std::thread::spawn(move || {
             for line in BufReader::new(stdout).lines().flatten() {
+                eprintln!("[kasaio:dev] {}", line);
                 if let Some(port_str) = line.trim().strip_prefix("KASAIO_API_PORT=") {
                     if let Ok(port) = port_str.trim().parse::<u16>() {
-                        *handle.state::<ApiPort>().0.lock().unwrap() = port;
-                        let _ = handle.emit("backend-ready", port);
+                        let handle = handle.clone();
+                        tauri::async_runtime::spawn(async move {
+                            wait_for_backend(port, handle).await;
+                        });
                     }
                 }
             }
@@ -131,9 +191,9 @@ mod dev {
 // Release mode — uses the bundled PyInstaller sidecar
 #[cfg(not(debug_assertions))]
 mod release {
-    use super::ApiPort;
+    use super::wait_for_backend;
     use std::sync::Mutex;
-    use tauri::{Emitter, Manager};
+    use tauri::Manager;
     use tauri_plugin_shell::{
         process::{CommandChild, CommandEvent},
         ShellExt,
@@ -159,10 +219,13 @@ mod release {
                 match event {
                     CommandEvent::Stdout(line) => {
                         let text = String::from_utf8_lossy(&line);
+                        eprintln!("[kasaio:release] {}", text);
                         if let Some(port_str) = text.trim().strip_prefix("KASAIO_API_PORT=") {
                             if let Ok(port) = port_str.trim().parse::<u16>() {
-                                *handle.state::<ApiPort>().0.lock().unwrap() = port;
-                                let _ = handle.emit("backend-ready", port);
+                                let handle = handle.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    wait_for_backend(port, handle).await;
+                                });
                             }
                         }
                     }
@@ -189,9 +252,9 @@ mod release {
         {
             use std::os::windows::process::CommandExt;
             let _ = std::process::Command::new("taskkill")
-            .args(["/F", "/T", "/IM", "python-sidecar.exe"])
-            .creation_flags(0x08000000)
-            .output();
+                .args(["/F", "/T", "/IM", "python-sidecar.exe"])
+                .creation_flags(0x08000000)
+                .output();
+        }
     }
-}
 }

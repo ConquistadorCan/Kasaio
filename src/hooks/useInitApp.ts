@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen, emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../store/useAppStore";
 import { useInvestmentStore } from "../store/useInvestmentStore";
@@ -9,6 +9,23 @@ import { assetsApi } from "../api/assets";
 import { holdingsApi } from "../api/holdings";
 import { assetPricesApi } from "../api/assetPrices";
 import { logError } from "../lib/logger";
+
+const POLL_INTERVAL_MS = 1000;
+const POLL_MAX_RETRIES = 3;
+
+async function waitForPort(): Promise<number> {
+  await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+  for (let attempt = 1; attempt <= POLL_MAX_RETRIES; attempt++) {
+    const port = await invoke<number>("get_api_port");
+    if (port !== 0) return port;
+    if (attempt < POLL_MAX_RETRIES) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+    }
+  }
+
+  throw new Error("Backend did not start in time.");
+}
 
 export function useInitApp() {
   const { setApiPort, setTransactions, setCategories } = useAppStore();
@@ -44,27 +61,52 @@ export function useInitApp() {
     setReady(true);
   }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice]);
 
+  const handleError = useCallback(async (err: unknown) => {
+    await logError("Failed to initialize app", err);
+    setError("Failed to connect to backend.");
+  }, []);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let unlistenFailed: (() => void) | undefined;
+    let loaded = false;
 
     async function init() {
       try {
-        unlisten = await listen<number>("backend-ready", async (event) => {
-          await loadData(event.payload);
+        unlisten = await listen<number>("backend_ready", async (event) => {
+          if (loaded) return;
+          loaded = true;
+          unlisten?.();
+          unlistenFailed?.();
+          await loadData(event.payload).catch(handleError);
         });
 
-        const port = await invoke<number>("get_api_port");
+        unlistenFailed = await listen<string>("backend_failed", async (event) => {
+          if (loaded) return;
+          loaded = true;
+          unlisten?.();
+          unlistenFailed?.();
+          await logError("Backend failed to start", event.payload);
+          setError("Failed to connect to backend.");
+        });
+
+        await emit("frontend_ready");
+
+        const port = await waitForPort();
+        if (loaded) return;
+        loaded = true;
+        unlisten?.();
+        unlistenFailed?.();
         await loadData(port);
       } catch (err) {
-        await logError("Failed to initialize app", err);
-        setError("Failed to connect to backend.");
+        if (!loaded) await handleError(err);
       }
     }
 
     init();
 
-    return () => { unlisten?.(); };
-  }, [loadData]);
+    return () => { unlisten?.(); unlistenFailed?.(); };
+  }, [loadData, handleError]);
 
   return { ready, error };
 }

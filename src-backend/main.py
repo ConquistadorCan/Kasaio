@@ -100,7 +100,7 @@ app.include_router(asset_price_router)
 app.include_router(asset_router)
 
 
-@app.get("/health")
+@app.get("/health") # DO NOT CHANGE THIS ENDPOINT, IT IS USED FOR HEALTH CHECKS
 async def health_check():
     return {"status": "ok"}
 

@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import select
 
 from database import AsyncSessionLocal
@@ -17,8 +19,8 @@ async def seed() -> None:
             existing = await db.execute(select(Asset).where(Asset.symbol == asset.symbol))
             if existing.scalar_one_or_none() is None:
                 db.add(asset)
-                print(f"Added: {asset.name}")
+                logging.info(f"Added: {asset.name}")
             else:
-                print(f"Skipped (already exists): {asset.name}")
+                logging.info(f"Skipped (already exists): {asset.name}")
         await db.commit()
-        print("Seed completed.")
+        logging.info("Seed completed.")
