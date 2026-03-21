@@ -7,6 +7,7 @@ import { transactionsApi } from "../api/transactions";
 import { categoriesApi } from "../api/categories";
 import { assetsApi } from "../api/assets";
 import { holdingsApi } from "../api/holdings";
+import { investmentTransactionsApi } from "../api/investmentTransactions";
 import { assetPricesApi } from "../api/assetPrices";
 import { logError } from "../lib/logger";
 
@@ -29,23 +30,25 @@ async function waitForPort(): Promise<number> {
 
 export function useInitApp() {
   const { setApiPort, setTransactions, setCategories } = useAppStore();
-  const { setAssets, setHoldings, setLatestPrice } = useInvestmentStore();
+  const { setAssets, setHoldings, setLatestPrice, setInvestmentTransactions } = useInvestmentStore();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async (port: number) => {
     setApiPort(port);
 
-    const [txns, cats, assets, holdings] = await Promise.all([
+    const [txns, cats, assets, holdings, investmentTxns] = await Promise.all([
       transactionsApi.list(),
       categoriesApi.list(),
       assetsApi.list(),
       holdingsApi.list(),
+      investmentTransactionsApi.list(),
     ]);
     setTransactions(txns);
     setCategories(cats);
     setAssets(assets);
     setHoldings(holdings);
+    setInvestmentTransactions(investmentTxns);
 
     await Promise.all(
       assets.map(async (a) => {
@@ -59,7 +62,7 @@ export function useInitApp() {
     );
 
     setReady(true);
-  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice]);
+  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice, setInvestmentTransactions]);
 
   const handleError = useCallback(async (err: unknown) => {
     await logError("Failed to initialize app", err);

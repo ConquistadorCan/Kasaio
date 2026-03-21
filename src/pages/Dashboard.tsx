@@ -81,13 +81,15 @@ export function Dashboard() {
   const { transactions, categories } = useAppStore();
   const { assets, holdings, latestPrices, investmentTransactions } = useInvestmentStore();
 
+  // ── Cash Flow ───────────────────────────────────────────────────────────
   const { totalIncome, totalExpense, netBalance } = useMemo(() => {
     const totalIncome = transactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + t.amount, 0);
     return { totalIncome, totalExpense, netBalance: totalIncome - totalExpense };
   }, [transactions]);
 
-  const { portfolioValue, portfolioCost, portfolioPnl, portfolioPnlPct } = useMemo(() => {
+  // ── Portfolio ───────────────────────────────────────────────────────────
+  const { portfolioValue, portfolioPnl, portfolioPnlPct } = useMemo(() => {
     const portfolioValue = holdings.reduce((sum, h) => {
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
       return sum + price * h.quantity;
@@ -95,11 +97,12 @@ export function Dashboard() {
     const portfolioCost = holdings.reduce((sum, h) => sum + h.average_cost * h.quantity, 0);
     const portfolioPnl = portfolioValue - portfolioCost;
     const portfolioPnlPct = portfolioCost > 0 ? (portfolioPnl / portfolioCost) * 100 : 0;
-    return { portfolioValue, portfolioCost, portfolioPnl, portfolioPnlPct };
+    return { portfolioValue, portfolioPnl, portfolioPnlPct };
   }, [holdings, latestPrices]);
 
   const netWorth = netBalance + portfolioValue;
 
+  // ── Monthly chart ───────────────────────────────────────────────────────
   const monthlyData = useMemo(() => {
     return getLast6Months().map(({ key, label }) => {
       const monthTxns = transactions.filter((t) => t.date.startsWith(key));
@@ -109,6 +112,7 @@ export function Dashboard() {
     });
   }, [transactions]);
 
+  // ── Category breakdown ──────────────────────────────────────────────────
   const categoryBreakdown = useMemo(() => {
     if (categories.length === 0) return [];
     const expenses = transactions.filter((t) => t.type.toLowerCase() === "expense" && t.category_id);
@@ -119,6 +123,7 @@ export function Dashboard() {
     }).filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5);
   }, [transactions, categories]);
 
+  // ── Asset allocation ────────────────────────────────────────────────────
   const assetAllocation = useMemo(() => {
     return holdings.map((h) => {
       const asset = assets.find((a) => a.id === h.asset_id);
@@ -127,16 +132,20 @@ export function Dashboard() {
     }).filter((a) => a.value > 0);
   }, [holdings, assets, latestPrices]);
 
-  const bestPerformer = useMemo(() => {
-    if (holdings.length === 0) return null;
+  // ── Holdings rows ───────────────────────────────────────────────────────
+  const holdingRows = useMemo(() => {
     return holdings.map((h) => {
       const asset = assets.find((a) => a.id === h.asset_id);
-      const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
-      const pnlPct = h.average_cost > 0 ? ((price - h.average_cost) / h.average_cost) * 100 : 0;
-      return { name: asset?.name ?? "—", pnlPct };
-    }).sort((a, b) => b.pnlPct - a.pnlPct)[0];
+      const price = latestPrices[h.asset_id]?.price ?? null;
+      const currentValue = price !== null ? price * h.quantity : null;
+      const costBasis = h.average_cost * h.quantity;
+      const pnl = currentValue !== null ? currentValue - costBasis : null;
+      const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
+      return { asset, holding: h, price, currentValue, pnl, pnlPct };
+    });
   }, [holdings, assets, latestPrices]);
 
+  // ── Recent transactions ─────────────────────────────────────────────────
   const recentCashFlow = useMemo(() => {
     return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
   }, [transactions]);
@@ -150,109 +159,88 @@ export function Dashboard() {
   return (
     <div className="flex flex-col gap-5 h-full overflow-y-auto pb-6">
 
-      {/* Row 1 — stat cards */}
-      <div className="grid grid-cols-6 gap-4">
-        <StatCard label="Income" value={formatCurrency(totalIncome)} icon={<TrendingUp size={15} />} variant="income" />
-        <StatCard label="Expenses" value={formatCurrency(totalExpense)} icon={<TrendingDown size={15} />} variant="expense" />
-        <StatCard label="Net Balance" value={formatCurrency(netBalance)} icon={<Wallet size={15} />} variant="neutral" />
-        <StatCard
-          label="Portfolio"
-          value={formatCurrency(portfolioValue)}
-          sub={`${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`}
-          icon={<BarChart2 size={15} />}
-          variant="violet"
-        />
-        <StatCard
-          label="P&L"
-          value={formatCurrency(Math.abs(portfolioPnl))}
-          sub={portfolioPnl >= 0 ? "Profit" : "Loss"}
-          icon={portfolioPnl >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-          variant={portfolioPnl >= 0 ? "income" : "expense"}
-        />
-        <StatCard label="Net Worth" value={formatCurrency(netWorth)} icon={<Wallet size={15} />} variant="neutral" />
+      {/* ── Section 1: Overview ── */}
+      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet size={18} className="text-violet-400" />
+          <p className="text-base font-semibold text-white">Overview</p>
+        </div>
+        <div className="flex gap-4">
+          <StatCard label="Cash Balance" value={formatCurrency(netBalance)} icon={<Wallet size={15} />} variant="neutral" />
+          <StatCard
+            label="Portfolio Value"
+            value={formatCurrency(portfolioValue)}
+            sub={`${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`}
+            icon={<BarChart2 size={15} />}
+            variant="violet"
+          />
+          <StatCard label="Net Worth" value={formatCurrency(netWorth)} icon={<Wallet size={15} />} variant="neutral" />
+        </div>
       </div>
 
-      {/* Row 2 — charts */}
-      <div className="grid grid-cols-[1fr_220px_220px] gap-4">
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-          <p className="text-sm font-medium text-white mb-1">Income vs Expenses</p>
-          <p className="text-xs text-white/30 mb-4">Last 6 months</p>
-          {transactions.length === 0 ? (
-            <div className="flex items-center justify-center h-36"><p className="text-sm text-white/20">No data yet</p></div>
-          ) : (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={monthlyData} barSize={10} barGap={3}>
-                <XAxis dataKey="label" tick={{ fill: "rgba(240,240,250,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                <Bar dataKey="income" radius={[4, 4, 0, 0]}>
-                  {monthlyData.map((_, i) => <Cell key={i} fill="#34d399" opacity={0.8} />)}
-                </Bar>
-                <Bar dataKey="expense" radius={[4, 4, 0, 0]}>
-                  {monthlyData.map((_, i) => <Cell key={i} fill="#f87171" opacity={0.8} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+      {/* ── Section 2: Cash Flow ── */}
+      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart2 size={18} className="text-violet-400" />
+          <p className="text-base font-semibold text-white">Cash Flow</p>
+        </div>
+        <div className="flex gap-4 mb-4">
+          <StatCard label="Total Income" value={formatCurrency(totalIncome)} icon={<TrendingUp size={15} />} variant="income" />
+          <StatCard label="Total Expenses" value={formatCurrency(totalExpense)} icon={<TrendingDown size={15} />} variant="expense" />
         </div>
 
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-          <p className="text-sm font-medium text-white mb-1">Asset Allocation</p>
-          <p className="text-xs text-white/30 mb-4">By current value</p>
-          {assetAllocation.length === 0 ? (
-            <div className="flex items-center justify-center h-36"><p className="text-xs text-white/20">No positions yet</p></div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={110}>
-                <PieChart>
-                  <Pie data={assetAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={50}>
-                    {assetAllocation.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} opacity={0.85} />)}
-                  </Pie>
-                </PieChart>
+        <div className="grid grid-cols-[1fr_220px] gap-4">
+          {/* Bar chart */}
+          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
+            <p className="text-sm font-medium text-white mb-1">Income vs Expenses</p>
+            <p className="text-xs text-white/30 mb-4">Last 6 months</p>
+            {transactions.length === 0 ? (
+              <div className="flex items-center justify-center h-36"><p className="text-sm text-white/20">No data yet</p></div>
+            ) : (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={monthlyData} barSize={10} barGap={3}>
+                  <XAxis dataKey="label" tick={{ fill: "rgba(240,240,250,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                  <Bar dataKey="income" radius={[4, 4, 0, 0]}>
+                    {monthlyData.map((_, i) => <Cell key={i} fill="#34d399" opacity={0.8} />)}
+                  </Bar>
+                  <Bar dataKey="expense" radius={[4, 4, 0, 0]}>
+                    {monthlyData.map((_, i) => <Cell key={i} fill="#f87171" opacity={0.8} />)}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
-              <div className="flex flex-col gap-1.5 mt-2">
-                {assetAllocation.map((a, i) => (
-                  <div key={a.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                      <span className="text-xs text-white/50">{a.name}</span>
+            )}
+          </div>
+
+          {/* Category breakdown */}
+          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
+            <p className="text-sm font-medium text-white mb-1">By Category</p>
+            <p className="text-xs text-white/30 mb-4">Expense breakdown</p>
+            {categoryBreakdown.length === 0 ? (
+              <div className="flex items-center justify-center h-36">
+                <p className="text-xs text-white/20 text-center leading-relaxed">No categorized<br />expenses yet.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {categoryBreakdown.map((cat) => (
+                  <div key={cat.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-white/60 truncate">{cat.name}</span>
+                      <span className="text-xs text-white/40 font-mono ml-2 shrink-0">{cat.percentage.toFixed(0)}%</span>
                     </div>
-                    <span className="text-xs font-mono text-white/40">₺{formatCurrency(a.value)}</span>
+                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-violet-500 rounded-full" style={{ width: `${cat.percentage}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-          <p className="text-sm font-medium text-white mb-1">By Category</p>
-          <p className="text-xs text-white/30 mb-4">Expense breakdown</p>
-          {categoryBreakdown.length === 0 ? (
-            <div className="flex items-center justify-center h-36">
-              <p className="text-xs text-white/20 text-center leading-relaxed">No categorized<br />expenses yet.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {categoryBreakdown.map((cat) => (
-                <div key={cat.name}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-white/60 truncate">{cat.name}</span>
-                    <span className="text-xs text-white/40 font-mono ml-2 shrink-0">{cat.percentage.toFixed(0)}%</span>
-                  </div>
-                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-violet-500 rounded-full" style={{ width: `${cat.percentage}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Row 3 — recent lists */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
+        {/* Recent cash flow */}
+        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden mt-4">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
             <p className="text-sm font-medium text-white">Recent Transactions</p>
             <button onClick={() => navigate("/cash-flow/transactions")} className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors">
@@ -260,7 +248,7 @@ export function Dashboard() {
             </button>
           </div>
           {recentCashFlow.length === 0 ? (
-            <div className="flex items-center justify-center py-10"><p className="text-sm text-white/20">No transactions yet</p></div>
+            <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No transactions yet</p></div>
           ) : (
             recentCashFlow.map((t) => (
               <div key={t.id} className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
@@ -278,16 +266,92 @@ export function Dashboard() {
             ))
           )}
         </div>
+      </div>
 
+      {/* ── Section 3: Portfolio ── */}
+      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={18} className="text-emerald-400" />
+          <p className="text-base font-semibold text-white">Portfolio</p>
+        </div>
+
+        <div className="grid grid-cols-[180px_1fr] gap-4 mb-4">
+          {/* Donut */}
+          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
+            <p className="text-sm font-medium text-white mb-1">Allocation</p>
+            {assetAllocation.length === 0 ? (
+              <div className="flex items-center justify-center h-24"><p className="text-xs text-white/20">No positions</p></div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={100}>
+                  <PieChart>
+                    <Pie data={assetAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46}>
+                      {assetAllocation.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} opacity={0.85} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  {assetAllocation.map((a, i) => (
+                    <div key={a.name} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="text-xs text-white/50 truncate">{a.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Holdings table */}
+          <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5">
+              {["Asset", "Qty (g)", "Value", "P&L"].map((col) => (
+                <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
+              ))}
+            </div>
+            {holdingRows.length === 0 ? (
+              <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No positions yet</p></div>
+            ) : (
+              holdingRows.map(({ asset, holding, currentValue, pnl, pnlPct }) => (
+                <div key={holding.id} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
+                  <div>
+                    <p className="text-sm text-white">{asset?.name ?? "—"}</p>
+                    <p className="text-xs text-white/30">{asset?.symbol ?? "—"}</p>
+                  </div>
+                  <span className="text-sm text-white/60 font-mono">{holding.quantity.toFixed(2)}</span>
+                  <span className="text-sm text-white font-mono">
+                    {currentValue !== null ? `₺${formatCurrency(currentValue)}` : "—"}
+                  </span>
+                  <div>
+                    {pnl !== null ? (
+                      <>
+                        <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                          {pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(pnl))}
+                        </p>
+                        <p className={cn("text-xs font-mono", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                          {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-sm text-white/20">—</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recent investments */}
         <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-            <p className="text-sm font-medium text-white">Recent Investments</p>
+            <p className="text-sm font-medium text-white">Recent Investment Transactions</p>
             <button onClick={() => navigate("/investments/transactions")} className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors">
               View all <ArrowRight size={12} />
             </button>
           </div>
           {recentInvestments.length === 0 ? (
-            <div className="flex items-center justify-center py-10"><p className="text-sm text-white/20">No investment transactions yet</p></div>
+            <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No investment transactions yet</p></div>
           ) : (
             recentInvestments.map((t) => {
               const asset = assets.find((a) => a.id === t.asset_id);
@@ -314,32 +378,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Row 4 — best performer + price update shortcut */}
-      {(bestPerformer || holdings.length > 0) && (
-        <div className="grid grid-cols-2 gap-4">
-          {bestPerformer && (
-            <div className="bg-[#0e0e18] border border-white/5 rounded-xl px-5 py-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Best Performer</p>
-                <p className="text-sm font-medium text-white">{bestPerformer.name}</p>
-              </div>
-              <p className={cn("text-lg font-semibold font-mono", bestPerformer.pnlPct >= 0 ? "text-emerald-400" : "text-red-400")}>
-                {bestPerformer.pnlPct >= 0 ? "+" : ""}{bestPerformer.pnlPct.toFixed(2)}%
-              </p>
-            </div>
-          )}
-          <button
-            onClick={() => navigate("/investments/price-update")}
-            className="bg-[#0e0e18] border border-white/5 rounded-xl px-5 py-4 flex items-center justify-between hover:bg-white/[0.03] transition-colors"
-          >
-            <div>
-              <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Prices</p>
-              <p className="text-sm font-medium text-white/70">Update asset prices</p>
-            </div>
-            <ArrowRight size={16} className="text-white/20" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }
