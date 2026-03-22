@@ -10,6 +10,7 @@ from models.asset import Asset
 ASSETS = [
     Asset(symbol="XAUTRYG", name="Gram Altın", asset_type=AssetType.COMMODITY),
     Asset(symbol="XAGTRYG", name="Gram Gümüş", asset_type=AssetType.COMMODITY),
+    Asset(symbol="BTCTRY", name="Bitcoin", asset_type=AssetType.CRYPTOCURRENCY),
 ]
 
 

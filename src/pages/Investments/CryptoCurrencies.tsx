@@ -8,14 +8,14 @@ import { formatCurrency } from "../../lib/formatters";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
 import { cn } from "../../lib/utils";
 
-export function Commodities() {
+export function CryptoCurrencies() {
   const { assets, holdings, latestPrices, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
   const [showModal, setShowModal] = useState(false);
   const [mutating, setMutating] = useState(false);
 
-  const commodities = assets.filter((a) => a.asset_type === "COMMODITY");
+  const cryptoAssets = assets.filter((a) => a.asset_type === "CRYPTOCURRENCY");
 
-  const rows = commodities.map((asset) => {
+  const rows = cryptoAssets.map((asset) => {
     const holding = holdings.find((h) => h.asset_id === asset.id);
     const latestPrice = latestPrices[asset.id]?.price ?? null;
     const currentValue = holding && latestPrice !== null ? latestPrice * holding.quantity : null;
@@ -54,8 +54,8 @@ export function Commodities() {
     <div className="flex flex-col h-full gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Commodities</h1>
-          <p className="text-sm text-white/40 mt-0.5">{commodities.length} assets</p>
+          <h1 className="text-xl font-semibold text-white">Cryptocurrencies</h1>
+          <p className="text-sm text-white/40 mt-0.5">{cryptoAssets.length} assets</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -67,8 +67,8 @@ export function Commodities() {
       </div>
 
       <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-[1fr_90px_120px_120px_120px_120px] px-5 py-3 border-b border-white/5 shrink-0">
-          {["Asset", "Qty (g)", "Avg Cost", "Price", "Value", "P&L"].map((col) => (
+        <div className="grid grid-cols-[1fr_120px_120px_120px_120px_120px] px-5 py-3 border-b border-white/5 shrink-0">
+          {["Asset", "Qty", "Avg Cost", "Price", "Value", "P&L"].map((col) => (
             <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
               {col}
             </span>
@@ -77,21 +77,21 @@ export function Commodities() {
 
         {rows.length === 0 ? (
           <div className="flex items-center justify-center flex-1">
-            <p className="text-sm text-white/20">No commodities found</p>
+            <p className="text-sm text-white/20">No crypto assets found</p>
           </div>
         ) : (
           <div className="overflow-y-auto flex-1">
             {rows.map(({ asset, holding, latestPrice, currentValue, pnl, pnlPct }) => (
               <div
                 key={asset.id}
-                className="grid grid-cols-[1fr_90px_120px_120px_120px_120px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                className="grid grid-cols-[1fr_120px_120px_120px_120px_120px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
               >
                 <div>
                   <p className="text-sm font-medium text-white">{asset.name}</p>
                   <p className="text-xs text-white/30 mt-0.5">{asset.symbol}</p>
                 </div>
                 <span className="text-sm text-white/70 font-mono">
-                  {holding ? holding.quantity.toFixed(2) : "—"}
+                  {holding ? holding.quantity.toFixed(6) : "—"}
                 </span>
                 <span className="text-sm text-white/70 font-mono">
                   {holding ? `₺${formatCurrency(holding.average_cost)}` : "—"}
@@ -125,7 +125,7 @@ export function Commodities() {
       {showModal && (
         <TransactionModal
           mode="add"
-          assets={commodities}
+          assets={cryptoAssets}
           onSubmit={handleAddTransaction}
           onClose={() => setShowModal(false)}
           loading={mutating}

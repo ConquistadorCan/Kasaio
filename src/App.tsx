@@ -6,6 +6,7 @@ import { Transactions } from "./pages/Transactions";
 import { Categories } from "./pages/Categories";
 import { InvestmentsPortfolio } from "./pages/Investments/index";
 import { Commodities } from "./pages/Investments/Commodities";
+import { CryptoCurrencies } from "./pages/Investments/CryptoCurrencies";
 import { InvestmentTransactions } from "./pages/Investments/Transactions";
 import { PriceUpdate } from "./pages/Investments/PriceUpdate";
 
@@ -31,6 +32,7 @@ export function App() {
           <Route path="cash-flow/categories" element={<Categories />} />
           <Route path="investments/portfolio" element={<InvestmentsPortfolio />} />
           <Route path="investments/commodities" element={<Commodities />} />
+          <Route path="investments/crypto" element={<CryptoCurrencies />} />
           <Route path="investments/transactions" element={<InvestmentTransactions />} />
           <Route path="investments/price-update" element={<PriceUpdate />} />
         </Route>

@@ -29,7 +29,12 @@ export const useInvestmentStore = create<InvestmentStore>((set) => ({
   addInvestmentTransaction: (txn) =>
     set((s) => ({ investmentTransactions: [txn, ...s.investmentTransactions] })),
   refreshHolding: (holding) =>
-    set((s) => ({
-      holdings: s.holdings.map((h) => (h.asset_id === holding.asset_id ? holding : h)),
-    })),
+    set((s) => {
+      const exists = s.holdings.some((h) => h.asset_id === holding.asset_id);
+      return {
+        holdings: exists
+          ? s.holdings.map((h) => (h.asset_id === holding.asset_id ? holding : h))
+          : [...s.holdings, holding],
+      };
+    }),
 }));

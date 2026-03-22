@@ -1,4 +1,4 @@
-export type AssetType = "COMMODITY";
+export type AssetType = "COMMODITY" | "CRYPTOCURRENCY";
 export type InvestmentTransactionType = "BUY" | "SELL";
 
 export interface Asset {

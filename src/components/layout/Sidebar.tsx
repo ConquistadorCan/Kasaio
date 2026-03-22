@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   BarChart2,
   Gem,
+  Bitcoin,
   Receipt,
   RefreshCw,
   type LucideIcon,
@@ -66,6 +67,7 @@ const NAV_ITEMS: TopLevelNav[] = [
     items: [
       { label: "Portfolio", path: "/investments/portfolio", icon: BarChart2 },
       { label: "Commodities", path: "/investments/commodities", icon: Gem },
+      { label: "Cryptocurrencies", path: "/investments/crypto", icon: Bitcoin },
       { label: "Transactions", path: "/investments/transactions", icon: Receipt },
       { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
     ],

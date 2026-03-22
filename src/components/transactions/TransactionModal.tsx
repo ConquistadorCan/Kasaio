@@ -23,6 +23,7 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
   const [errors, setErrors] = useState<Partial<TransactionFormData>>({});
   const [submitError, setSubmitError] = useState("");
   const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
   const pickerYear = currentPickerDate.getFullYear();
@@ -160,7 +161,10 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
           {/* Date */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Date</label>
-            <PopoverPrimitive.Root onOpenChange={(open) => { if (!open) setPickerView("day"); }}>
+            <PopoverPrimitive.Root
+              open={datePickerOpen}
+              onOpenChange={(open) => { setDatePickerOpen(open); if (!open) setPickerView("day"); }}
+            >
               <PopoverPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm outline-none transition-colors",
@@ -283,6 +287,7 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
                           if (day) {
                             const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
                             field("date", local.toISOString().split("T")[0]);
+                            setDatePickerOpen(false);
                           }
                         }}
                         classNames={DAY_PICKER_CLASS_NAMES}
