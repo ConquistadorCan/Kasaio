@@ -9,6 +9,7 @@ import type { Asset } from "../../types/investments";
 const ASSET_TYPE_LABELS: Record<string, string> = {
   COMMODITY: "Commodities",
   CRYPTOCURRENCY: "Cryptocurrencies",
+  TEFAS_FUND: "TEFAS Funds",
 };
 
 interface AssetRowProps {

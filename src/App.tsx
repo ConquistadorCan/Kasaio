@@ -7,6 +7,7 @@ import { Categories } from "./pages/Categories";
 import { InvestmentsPortfolio } from "./pages/Investments/index";
 import { Commodities } from "./pages/Investments/Commodities";
 import { CryptoCurrencies } from "./pages/Investments/CryptoCurrencies";
+import { TefasFunds } from "./pages/Investments/TefasFunds";
 import { InvestmentTransactions } from "./pages/Investments/Transactions";
 import { PriceUpdate } from "./pages/Investments/PriceUpdate";
 
@@ -33,6 +34,7 @@ export function App() {
           <Route path="investments/portfolio" element={<InvestmentsPortfolio />} />
           <Route path="investments/commodities" element={<Commodities />} />
           <Route path="investments/crypto" element={<CryptoCurrencies />} />
+          <Route path="investments/tefas-funds" element={<TefasFunds />} />
           <Route path="investments/transactions" element={<InvestmentTransactions />} />
           <Route path="investments/price-update" element={<PriceUpdate />} />
         </Route>

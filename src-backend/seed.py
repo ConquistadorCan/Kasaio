@@ -11,6 +11,8 @@ ASSETS = [
     Asset(symbol="XAUTRYG", name="Gram Altın", asset_type=AssetType.COMMODITY),
     Asset(symbol="XAGTRYG", name="Gram Gümüş", asset_type=AssetType.COMMODITY),
     Asset(symbol="BTCTRY", name="Bitcoin", asset_type=AssetType.CRYPTOCURRENCY),
+    Asset(symbol="TIV", name="İŞ Kısa Vadeli Borçlanma", asset_type=AssetType.TEFAS_FUND),
+    Asset(symbol="MAC", name="Marmara Capital Hisse Senedi", asset_type=AssetType.TEFAS_FUND),
 ]
 
 

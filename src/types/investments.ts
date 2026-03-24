@@ -1,4 +1,4 @@
-export type AssetType = "COMMODITY" | "CRYPTOCURRENCY";
+export type AssetType = "COMMODITY" | "CRYPTOCURRENCY" | "TEFAS_FUND";
 export type InvestmentTransactionType = "BUY" | "SELL";
 
 export interface Asset {

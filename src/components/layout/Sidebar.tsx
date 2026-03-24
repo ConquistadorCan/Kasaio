@@ -68,6 +68,7 @@ const NAV_ITEMS: TopLevelNav[] = [
       { label: "Portfolio", path: "/investments/portfolio", icon: BarChart2 },
       { label: "Commodities", path: "/investments/commodities", icon: Gem },
       { label: "Cryptocurrencies", path: "/investments/crypto", icon: Bitcoin },
+      { label: "TEFAS Funds", path: "/investments/tefas-funds", icon: TrendingUp },
       { label: "Transactions", path: "/investments/transactions", icon: Receipt },
       { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
     ],
