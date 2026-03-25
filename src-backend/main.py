@@ -51,9 +51,6 @@ async def lifespan(app: FastAPI):
     import models.asset_price  # noqa: F401
     import models.asset  # noqa: F401
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     await seed()
 
     yield
@@ -91,11 +88,13 @@ from routers.holding_router import router as holding_router
 from routers.investment_transaction_router import router as investment_transaction_router
 from routers.asset_price_router import router as asset_price_router
 from routers.asset_router import router as asset_router
+from routers.exchange_rate_router import router as exchange_rate_router
 
 app.include_router(category_router)
 app.include_router(transaction_router)
 app.include_router(holding_router)
 app.include_router(investment_transaction_router)
+app.include_router(exchange_rate_router)
 app.include_router(asset_price_router)
 app.include_router(asset_router)
 

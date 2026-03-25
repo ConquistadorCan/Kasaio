@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
 from enums.asset_type_enum import AssetType
+from enums.currency_enum import Currency
 
 
 class AssetResponse(BaseModel):
@@ -10,3 +11,4 @@ class AssetResponse(BaseModel):
     symbol: str
     name: str
     asset_type: AssetType
+    currency: Currency
