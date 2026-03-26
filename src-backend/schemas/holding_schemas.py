@@ -8,3 +8,7 @@ class HoldingResponse(BaseModel):
     asset_id: int
     quantity: float
     average_cost: float
+    cost_basis: float
+    current_value: float | None
+    pnl: float | None
+    pnl_pct: float | None
