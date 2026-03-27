@@ -17,6 +17,8 @@ import {
   Bitcoin,
   Receipt,
   RefreshCw,
+  LineChart,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -69,6 +71,8 @@ const NAV_ITEMS: TopLevelNav[] = [
       { label: "Commodities", path: "/investments/commodities", icon: Gem },
       { label: "Cryptocurrencies", path: "/investments/crypto", icon: Bitcoin },
       { label: "TEFAS Funds", path: "/investments/tefas-funds", icon: TrendingUp },
+      { label: "ETFs", path: "/investments/etf", icon: LineChart },
+      { label: "Eurobonds", path: "/investments/eurobond", icon: Landmark },
       { label: "Transactions", path: "/investments/transactions", icon: Receipt },
       { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
     ],

@@ -18,11 +18,7 @@ export function TefasFunds() {
   const rows = tefasAssets.map((asset) => {
     const holding = holdings.find((h) => h.asset_id === asset.id);
     const latestPrice = latestPrices[asset.id]?.price ?? null;
-    const currentValue = holding && latestPrice !== null ? latestPrice * holding.quantity : null;
-    const costBasis = holding ? holding.average_cost * holding.quantity : null;
-    const pnl = currentValue !== null && costBasis !== null ? currentValue - costBasis : null;
-    const pnlPct = pnl !== null && costBasis && costBasis > 0 ? (pnl / costBasis) * 100 : null;
-    return { asset, holding, latestPrice, currentValue, pnl, pnlPct };
+    return { asset, holding, latestPrice };
   });
 
   async function handleAddTransaction(data: {
@@ -81,7 +77,7 @@ export function TefasFunds() {
           </div>
         ) : (
           <div className="overflow-y-auto flex-1">
-            {rows.map(({ asset, holding, latestPrice, currentValue, pnl, pnlPct }) => (
+            {rows.map(({ asset, holding, latestPrice }) => (
               <div
                 key={asset.id}
                 className="grid grid-cols-[1fr_120px_120px_120px_120px_120px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
@@ -100,16 +96,16 @@ export function TefasFunds() {
                   {latestPrice !== null ? `₺${formatCurrency(latestPrice)}` : "—"}
                 </span>
                 <span className="text-sm text-white font-mono">
-                  {currentValue !== null ? `₺${formatCurrency(currentValue)}` : "—"}
+                  {holding?.current_value != null ? `₺${formatCurrency(holding.current_value)}` : "—"}
                 </span>
                 <div>
-                  {pnl !== null ? (
+                  {holding?.pnl != null ? (
                     <>
-                      <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                        {pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(pnl))}
+                      <p className={cn("text-sm font-mono font-medium", holding.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                        {holding.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(holding.pnl))}
                       </p>
-                      <p className={cn("text-xs font-mono mt-0.5", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
-                        {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
+                      <p className={cn("text-xs font-mono mt-0.5", holding.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                        {holding.pnl >= 0 ? "+" : ""}{holding.pnl_pct?.toFixed(2)}%
                       </p>
                     </>
                   ) : (
