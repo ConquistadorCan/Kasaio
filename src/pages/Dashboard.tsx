@@ -29,11 +29,12 @@ interface StatCardProps {
   label: string;
   value: string;
   sub?: string;
+  subColor?: string;
   icon: React.ReactNode;
   variant: "income" | "expense" | "neutral" | "violet";
 }
 
-function StatCard({ label, value, sub, icon, variant }: StatCardProps) {
+function StatCard({ label, value, sub, subColor, icon, variant }: StatCardProps) {
   const colors = {
     income: "text-emerald-400",
     expense: "text-red-400",
@@ -49,7 +50,7 @@ function StatCard({ label, value, sub, icon, variant }: StatCardProps) {
       <span className={cn("text-2xl font-semibold tracking-tight font-mono", colors[variant])}>
         ₺{value}
       </span>
-      {sub && <span className="text-xs font-mono text-white/30">{sub}</span>}
+      {sub && <span className={cn("text-xs font-mono", subColor ?? "text-white/30")}>{sub}</span>}
     </div>
   );
 }
@@ -171,6 +172,7 @@ export function Dashboard() {
             label="Portfolio Value"
             value={formatCurrency(portfolioValue)}
             sub={`${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`}
+            subColor={portfolioPnl >= 0 ? "text-emerald-400" : "text-red-400"}
             icon={<BarChart2 size={15} />}
             variant="violet"
           />
