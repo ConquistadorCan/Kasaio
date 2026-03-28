@@ -45,12 +45,22 @@ function StatCard({ label, value, sub, subColor, icon, variant }: StatCardProps)
     <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl px-5 py-4 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-white/40 uppercase tracking-wider">{label}</span>
-        <span className={cn("opacity-60", colors[variant])}>{icon}</span>
+        {sub ? (
+          <span className={cn(
+            "text-xs font-mono font-medium px-1.5 py-0.5 rounded-md",
+            subColor === "text-emerald-400" ? "bg-emerald-500/10 text-emerald-400" :
+            subColor === "text-red-400"     ? "bg-red-500/10 text-red-400" :
+                                              "text-white/30"
+          )}>
+            {sub}
+          </span>
+        ) : (
+          <span className={cn("opacity-60", colors[variant])}>{icon}</span>
+        )}
       </div>
       <span className={cn("text-2xl font-semibold tracking-tight font-mono", colors[variant])}>
         ₺{value}
       </span>
-      {sub && <span className={cn("text-xs font-mono", subColor ?? "text-white/30")}>{sub}</span>}
     </div>
   );
 }
