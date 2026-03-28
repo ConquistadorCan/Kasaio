@@ -17,7 +17,7 @@ export function InvestmentTransactions() {
   const [mutating, setMutating] = useState(false);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [filterAsset, setFilterAsset] = useState<number | "all">("all");
-  const [filterType, setFilterType] = useState<"BUY" | "SELL" | "all">("all");
+  const [filterType, setFilterType] = useState<"BUY" | "SELL" | "INCOME" | "all">("all");
 
   const fetchTransactions = useCallback(async () => {
     setFetchError(null);
@@ -39,7 +39,7 @@ export function InvestmentTransactions() {
 
   async function handleAdd(data: {
     asset_id: number;
-    transaction_type: "BUY" | "SELL";
+    transaction_type: "BUY" | "SELL" | "INCOME";
     quantity: number;
     price: number;
     date: string;
@@ -51,8 +51,10 @@ export function InvestmentTransactions() {
         date: new Date(data.date).toISOString(),
       });
       addInvestmentTransaction(txn);
-      const updatedHolding = await holdingsApi.get(data.asset_id);
-      refreshHolding(updatedHolding);
+      if (data.transaction_type !== "INCOME") {
+        const updatedHolding = await holdingsApi.get(data.asset_id);
+        refreshHolding(updatedHolding);
+      }
       setShowModal(false);
     } catch (err) {
       await logError("Failed to add investment transaction", err);
@@ -62,7 +64,6 @@ export function InvestmentTransactions() {
     }
   }
 
-  const commodities = assets.filter((a) => a.asset_type === "COMMODITY");
 
   const sorted = [...investmentTransactions]
     .filter((t) => filterAsset === "all" || t.asset_id === filterAsset)
@@ -91,7 +92,7 @@ export function InvestmentTransactions() {
       <div className="flex items-center gap-3">
         {/* Type filter */}
         <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
-          {(["all", "BUY", "SELL"] as const).map((t) => (
+          {(["all", "BUY", "SELL", "INCOME"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setFilterType(t)}
@@ -116,7 +117,7 @@ export function InvestmentTransactions() {
           >
             All
           </button>
-          {commodities.map((a) => (
+          {assets.map((a) => (
             <button
               key={a.id}
               onClick={() => setFilterAsset(a.id)}
@@ -164,7 +165,6 @@ export function InvestmentTransactions() {
             <div className="overflow-y-auto flex-1">
               {sorted.map((t) => {
                 const asset = assets.find((a) => a.id === t.asset_id);
-                const isBuy = t.transaction_type === "BUY";
                 const total = t.quantity * t.price;
                 return (
                   <div
@@ -179,9 +179,11 @@ export function InvestmentTransactions() {
                     <span>
                       <span className={cn(
                         "text-[11px] font-medium px-2 py-1 rounded-full border",
-                        isBuy
+                        t.transaction_type === "BUY"
                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : "bg-red-500/10 text-red-400 border-red-500/20"
+                          : t.transaction_type === "SELL"
+                            ? "bg-red-500/10 text-red-400 border-red-500/20"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                       )}>
                         {t.transaction_type}
                       </span>
@@ -200,7 +202,7 @@ export function InvestmentTransactions() {
       {showModal && (
         <TransactionModal
           mode="add"
-          assets={commodities}
+          assets={assets}
           onSubmit={handleAdd}
           onClose={() => setShowModal(false)}
           loading={mutating}

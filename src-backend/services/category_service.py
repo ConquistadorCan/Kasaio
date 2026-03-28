@@ -40,6 +40,10 @@ async def get_categories(db: AsyncSession) -> list[Category]:
     return categories
 
 
+async def get_category(db: AsyncSession, category_id: int) -> Category | None:
+    return await db.get(Category, category_id)
+
+
 async def delete_category(db: AsyncSession, category_id: int) -> bool:
     category = await db.get(Category, category_id)
     if not category:

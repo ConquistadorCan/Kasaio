@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { categoriesApi } from "../api/categories";
 import { useAppStore } from "../store/useAppStore";
@@ -14,6 +14,7 @@ interface CategoryFormData {
 }
 
 const EMPTY_FORM: CategoryFormData = { name: "" };
+const SYSTEM_CATEGORY_NAMES = new Set(["Investment Income", "Investment", "Investment Sale"]);
 
 interface CategoryModalProps {
   mode: "add" | "edit";
@@ -175,30 +176,37 @@ export function Categories() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 content-start overflow-y-auto flex-1">
-          {categories.map((category) => (
-            <div
-              key={category.id}
-              className="flex items-center justify-between bg-[#0e0e18] border border-white/5 rounded-xl px-4 py-3.5 hover:border-white/10 transition-colors group"
-            >
-              <span className="text-sm text-white font-medium">
-                {category.name}
-              </span>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => setEditing(category)}
-                  className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  onClick={() => setConfirmId(category.id)}
-                  className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
+          {categories.map((category) => {
+            const isSystem = SYSTEM_CATEGORY_NAMES.has(category.name);
+            return (
+              <div
+                key={category.id}
+                className="flex items-center justify-between bg-[#0e0e18] border border-white/5 rounded-xl px-4 py-3.5 hover:border-white/10 transition-colors group"
+              >
+                <span className="text-sm text-white font-medium">
+                  {category.name}
+                </span>
+                {isSystem ? (
+                  <Lock size={13} className="text-white/20 shrink-0" />
+                ) : (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => setEditing(category)}
+                      className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(category.id)}
+                      className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

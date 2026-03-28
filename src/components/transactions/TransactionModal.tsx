@@ -17,8 +17,11 @@ interface TransactionModalProps {
   loading: boolean;
 }
 
+const SYSTEM_CATEGORY_NAMES = new Set(["Investment Income", "Investment", "Investment Sale"]);
+
 export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose, loading }: TransactionModalProps) {
-  const categories = useAppStore((s) => s.categories);
+  const allCategories = useAppStore((s) => s.categories);
+  const categories = allCategories.filter((c) => !SYSTEM_CATEGORY_NAMES.has(c.name));
   const [form, setForm] = useState<TransactionFormData>(initial);
   const [errors, setErrors] = useState<Partial<TransactionFormData>>({});
   const [submitError, setSubmitError] = useState("");

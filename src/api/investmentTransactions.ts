@@ -3,7 +3,7 @@ import type { InvestmentTransaction } from "../types/investments";
 
 interface InvestmentTransactionCreate {
   asset_id: number;
-  transaction_type: "BUY" | "SELL";
+  transaction_type: "BUY" | "SELL" | "INCOME";
   quantity: number;
   price: number;
   date: string;

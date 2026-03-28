@@ -1,5 +1,5 @@
 export type AssetType = "COMMODITY" | "CRYPTOCURRENCY" | "TEFAS_FUND" | "ETF" | "EUROBOND";
-export type InvestmentTransactionType = "BUY" | "SELL";
+export type InvestmentTransactionType = "BUY" | "SELL" | "INCOME";
 export type Currency = "TRY" | "USD";
 
 export interface Asset {

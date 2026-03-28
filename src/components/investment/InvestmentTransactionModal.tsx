@@ -2,15 +2,16 @@ import { useState } from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { DayPicker } from "react-day-picker";
-import { CalendarIcon, ChevronDown } from "lucide-react";
+import { CalendarIcon, ChevronDown, AlertTriangle } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { DAY_PICKER_CLASS_NAMES } from "../../components/transactions/types";
 import { ErrorBanner } from "../../components/ui/ErrorComponents";
+import { useInvestmentStore } from "../../store/useInvestmentStore";
 import type { Asset } from "../../types/investments";
 
 interface FormData {
   asset_id: string;
-  transaction_type: "BUY" | "SELL";
+  transaction_type: "BUY" | "SELL" | "INCOME";
   quantity: string;
   price: string;
   date: string;
@@ -24,12 +25,18 @@ const EMPTY_FORM: FormData = {
   date: new Date().toISOString().split("T")[0],
 };
 
+const TYPE_STYLES: Record<"BUY" | "SELL" | "INCOME", string> = {
+  BUY:    "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+  SELL:   "bg-red-500/15 text-red-400 border border-red-500/25",
+  INCOME: "bg-amber-500/15 text-amber-400 border border-amber-500/25",
+};
+
 interface InvestmentTransactionModalProps {
   mode: "add" | "edit";
   assets: Asset[];
   onSubmit: (data: {
     asset_id: number;
-    transaction_type: "BUY" | "SELL";
+    transaction_type: "BUY" | "SELL" | "INCOME";
     quantity: number;
     price: number;
     date: string;
@@ -39,6 +46,7 @@ interface InvestmentTransactionModalProps {
 }
 
 export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: InvestmentTransactionModalProps) {
+  const { holdings } = useInvestmentStore();
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
@@ -91,16 +99,14 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Type</label>
             <div className="flex gap-2">
-              {(["BUY", "SELL"] as const).map((t) => (
+              {(["BUY", "SELL", "INCOME"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => field("transaction_type", t)}
                   className={cn(
                     "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
                     form.transaction_type === t
-                      ? t === "BUY"
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-red-500/15 text-red-400 border border-red-500/25"
+                      ? TYPE_STYLES[t]
                       : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
                   )}
                 >
@@ -148,9 +154,21 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
             {errors.asset_id && <p className="text-xs text-red-400 mt-1">{errors.asset_id}</p>}
           </div>
 
+          {/* No-holding warning for INCOME */}
+          {form.transaction_type === "INCOME" && form.asset_id && !holdings.some((h) => h.asset_id === Number(form.asset_id)) && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+              <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-yellow-400">
+                No holding found for this asset. Income will still be recorded.
+              </p>
+            </div>
+          )}
+
           {/* Quantity */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity (g)</label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">
+              {form.transaction_type === "INCOME" ? "Units held" : "Quantity"}
+            </label>
             <input
               type="number"
               value={form.quantity}
@@ -167,7 +185,9 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
 
           {/* Price */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Price per unit (₺)</label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">
+              {form.transaction_type === "INCOME" ? "Income per unit" : "Price per unit"}
+            </label>
             <input
               type="number"
               value={form.price}
@@ -181,6 +201,18 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
             />
             {errors.price && <p className="text-xs text-red-400 mt-1">{errors.price}</p>}
           </div>
+
+          {/* Total preview — only for INCOME */}
+          {form.transaction_type === "INCOME" && (
+            <div className="flex items-center justify-between px-3 py-2 bg-amber-500/5 border border-amber-500/15 rounded-lg">
+              <span className="text-xs text-white/40">Total income</span>
+              <span className="text-sm font-mono font-medium text-amber-400">
+                {form.quantity && form.price && !isNaN(Number(form.quantity)) && !isNaN(Number(form.price))
+                  ? `₺${(Number(form.quantity) * Number(form.price)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : "—"}
+              </span>
+            </div>
+          )}
 
           {/* Date */}
           <div>
