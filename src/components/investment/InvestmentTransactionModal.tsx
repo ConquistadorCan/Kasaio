@@ -56,9 +56,28 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
   const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
   const pickerYear = currentPickerDate.getFullYear();
 
+  const activeAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
+  const pastAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity === 0));
+  const allAssets = assets.filter((a) => !holdings.some((h) => h.asset_id === a.id));
+
+  const selectedAsset = form.asset_id ? assets.find((a) => a.id === Number(form.asset_id)) : undefined;
+  const currency = selectedAsset?.currency ?? "TRY";
+  const currencySymbol = currency === "USD" ? "$" : "₺";
+
   function field(key: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
+    setSubmitError("");
+  }
+
+  function handleAssetChange(assetId: string) {
+    const holding = holdings.find((h) => h.asset_id === Number(assetId) && h.quantity > 0);
+    if (form.transaction_type === "INCOME" && holding) {
+      setForm((prev) => ({ ...prev, asset_id: assetId, quantity: String(holding.quantity) }));
+    } else {
+      setForm((prev) => ({ ...prev, asset_id: assetId }));
+    }
+    setErrors((prev) => ({ ...prev, asset_id: undefined, quantity: undefined }));
     setSubmitError("");
   }
 
@@ -119,7 +138,7 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
           {/* Asset */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Asset</label>
-            <SelectPrimitive.Root value={form.asset_id} onValueChange={(v) => field("asset_id", v)}>
+            <SelectPrimitive.Root value={form.asset_id} onValueChange={handleAssetChange}>
               <SelectPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors data-[placeholder]:text-white/20",
@@ -138,15 +157,71 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
                   className="z-50 w-[var(--radix-select-trigger-width)] bg-[#141422] border border-white/10 rounded-lg shadow-xl overflow-hidden"
                 >
                   <SelectPrimitive.Viewport className="p-1">
-                    {assets.map((a) => (
-                      <SelectPrimitive.Item
-                        key={a.id}
-                        value={String(a.id)}
-                        className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                      >
-                        <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                      </SelectPrimitive.Item>
-                    ))}
+                    {activeAssets.length > 0 && (
+                      <SelectPrimitive.Group>
+                        <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                          Active Holdings
+                        </SelectPrimitive.Label>
+                        {activeAssets.map((a) => {
+                          const holding = holdings.find((h) => h.asset_id === a.id);
+                          return (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              {holding && (
+                                <span className="text-xs text-white/30 ml-3 font-mono tabular-nums">
+                                  {holding.quantity.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} units
+                                </span>
+                              )}
+                            </SelectPrimitive.Item>
+                          );
+                        })}
+                      </SelectPrimitive.Group>
+                    )}
+
+                    {pastAssets.length > 0 && (
+                      <>
+                        {activeAssets.length > 0 && <div className="my-1 h-px bg-white/5" />}
+                        <SelectPrimitive.Group>
+                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                            Past Assets
+                          </SelectPrimitive.Label>
+                          {pastAssets.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white/50 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              <span className="text-xs text-white/20 ml-3">sold out</span>
+                            </SelectPrimitive.Item>
+                          ))}
+                        </SelectPrimitive.Group>
+                      </>
+                    )}
+
+                    {allAssets.length > 0 && (
+                      <>
+                        {(activeAssets.length > 0 || pastAssets.length > 0) && <div className="my-1 h-px bg-white/5" />}
+                        <SelectPrimitive.Group>
+                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                            All Assets
+                          </SelectPrimitive.Label>
+                          {allAssets.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/60 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                            </SelectPrimitive.Item>
+                          ))}
+                        </SelectPrimitive.Group>
+                      </>
+                    )}
                   </SelectPrimitive.Viewport>
                 </SelectPrimitive.Content>
               </SelectPrimitive.Portal>
@@ -186,7 +261,7 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
           {/* Price */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">
-              {form.transaction_type === "INCOME" ? "Income per unit" : "Price per unit"}
+              {form.transaction_type === "INCOME" ? `Income per unit (${currency})` : `Price per unit (${currency})`}
             </label>
             <input
               type="number"
@@ -205,10 +280,12 @@ export function TransactionModal({ mode, assets, onSubmit, onClose, loading }: I
           {/* Total preview — only for INCOME */}
           {form.transaction_type === "INCOME" && (
             <div className="flex items-center justify-between px-3 py-2 bg-amber-500/5 border border-amber-500/15 rounded-lg">
-              <span className="text-xs text-white/40">Total income</span>
+              <span className="text-xs text-white/40">
+                Total income{currency === "USD" ? " · converted to ₺ on save" : ""}
+              </span>
               <span className="text-sm font-mono font-medium text-amber-400">
                 {form.quantity && form.price && !isNaN(Number(form.quantity)) && !isNaN(Number(form.price))
-                  ? `₺${(Number(form.quantity) * Number(form.price)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  ? `${currencySymbol}${(Number(form.quantity) * Number(form.price)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   : "—"}
               </span>
             </div>
