@@ -7,13 +7,15 @@ import { logError } from "../../lib/logger";
 import { formatCurrency, formatDate } from "../../lib/formatters";
 import { LoadingState, ErrorState } from "../../components/ui/ErrorComponents";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
+import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
 import { cn } from "../../lib/utils";
 
 export function InvestmentTransactions() {
-  const { investmentTransactions, assets, setInvestmentTransactions, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
+  const { investmentTransactions, assets, holdings, setInvestmentTransactions, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [filterAsset, setFilterAsset] = useState<number | "all">("all");
@@ -39,7 +41,7 @@ export function InvestmentTransactions() {
 
   async function handleAdd(data: {
     asset_id: number;
-    transaction_type: "BUY" | "SELL" | "INCOME";
+    transaction_type: "BUY" | "SELL";
     quantity: number;
     price: number;
     date: string;
@@ -51,14 +53,35 @@ export function InvestmentTransactions() {
         date: new Date(data.date).toISOString(),
       });
       addInvestmentTransaction(txn);
-      if (data.transaction_type !== "INCOME") {
-        const updatedHolding = await holdingsApi.get(data.asset_id);
-        refreshHolding(updatedHolding);
-      }
+      const updatedHolding = await holdingsApi.get(data.asset_id);
+      refreshHolding(updatedHolding);
       setShowModal(false);
     } catch (err) {
       await logError("Failed to add investment transaction", err);
       return "Failed to add transaction. Please try again.";
+    } finally {
+      setMutating(false);
+    }
+  }
+
+  async function handleAddIncome(data: {
+    asset_id: number;
+    transaction_type: "INCOME";
+    quantity: number;
+    price: number;
+    date: string;
+  }): Promise<string | undefined> {
+    setMutating(true);
+    try {
+      const txn = await investmentTransactionsApi.create({
+        ...data,
+        date: new Date(data.date).toISOString(),
+      });
+      addInvestmentTransaction(txn);
+      setShowIncomeModal(false);
+    } catch (err) {
+      await logError("Failed to record income", err);
+      return "Failed to record income. Please try again.";
     } finally {
       setMutating(false);
     }
@@ -80,13 +103,22 @@ export function InvestmentTransactions() {
           <h1 className="text-xl font-semibold text-white">Investment Transactions</h1>
           <p className="text-sm text-white/40 mt-0.5">{investmentTransactions.length} total</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          New Transaction
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowIncomeModal(true)}
+            className="flex items-center gap-2 bg-amber-600/80 hover:bg-amber-500/80 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={15} />
+            Record Income
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={15} />
+            New Transaction
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -189,8 +221,8 @@ export function InvestmentTransactions() {
                       </span>
                     </span>
                     <span className="text-sm text-white/70 font-mono">{t.quantity.toFixed(2)}</span>
-                    <span className="text-sm text-white/70 font-mono">₺{formatCurrency(t.price)}</span>
-                    <span className="text-sm text-white font-mono">₺{formatCurrency(total)}</span>
+                    <span className="text-sm text-white/70 font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(t.price)}</span>
+                    <span className="text-sm text-white font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(total)}</span>
                   </div>
                 );
               })}
@@ -203,8 +235,17 @@ export function InvestmentTransactions() {
         <TransactionModal
           mode="add"
           assets={assets}
+          holdings={holdings}
           onSubmit={handleAdd}
           onClose={() => setShowModal(false)}
+          loading={mutating}
+        />
+      )}
+
+      {showIncomeModal && (
+        <IncomeTransactionModal
+          onSubmit={handleAddIncome}
+          onClose={() => setShowIncomeModal(false)}
           loading={mutating}
         />
       )}

@@ -2,16 +2,15 @@ import { useRef, useState } from "react";
 import { Pencil, Trash2, ArrowUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { formatAmount, formatDate } from "../../lib/formatters";
-import { TYPE_BADGE } from "./types";
+import { TYPE_BADGE, type CashFlowRow } from "./types";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import type { Transaction } from "../../types";
 
 interface TransactionTableProps {
-  transactions: Transaction[];
+  transactions: CashFlowRow[];
   sortOrder: "desc" | "asc";
   onSortToggle: () => void;
   getCategoryName: (id: number | null) => string;
-  onEdit: (t: Transaction) => void;
+  onEdit: (t: CashFlowRow) => void;
   onDelete: (id: number) => void;
 }
 
@@ -93,22 +92,26 @@ export function TransactionTable({
                     normalizedType === "income" ? "text-emerald-400" : "text-red-400"
                   )}
                 >
-                  {formatAmount(t.amount, normalizedType)}
+                  {formatAmount(t.amount, normalizedType, t.currency)}
                 </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onEdit(t)}
-                    className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                  >
-                    <Pencil size={13} />
-                  </button>
-                  <button
-                    onClick={() => setConfirmId(t.id)}
-                    className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+                {t._readonly ? (
+                  <div />
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onEdit(t)}
+                      className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(t.id)}
+                      className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

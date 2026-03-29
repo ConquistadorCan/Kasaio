@@ -11,8 +11,6 @@ from services.category_service import (
     update_category,
 )
 
-SYSTEM_CATEGORY_NAMES = {"Investment Income", "Investment", "Investment Sale"}
-
 router = APIRouter(prefix="/categories", tags=["categories"])
 
 
@@ -31,8 +29,6 @@ async def edit_category(category_id: int, data: CategoryUpdateSchema, db: AsyncS
     category = await get_category(db, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    if category.name in SYSTEM_CATEGORY_NAMES:
-        raise HTTPException(status_code=403, detail="System categories cannot be modified")
     updated = await update_category(db, category_id, data)
     return updated
 
@@ -42,8 +38,6 @@ async def remove_category(category_id: int, db: AsyncSession = Depends(get_db)):
     category = await get_category(db, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    if category.name in SYSTEM_CATEGORY_NAMES:
-        raise HTTPException(status_code=403, detail="System categories cannot be deleted")
     deleted = await delete_category(db, category_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Category not found")

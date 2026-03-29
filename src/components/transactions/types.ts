@@ -1,18 +1,23 @@
-import type { TransactionType } from "../../types";
+import type { Transaction, TransactionType } from "../../types";
 
 export type FilterType = "all" | TransactionType;
 
 export interface TransactionFormData {
   description: string;
   type: TransactionType;
+  currency: "TRY" | "USD";
   category_id: string;
   amount: string;
   date: string;
+  _readonly?: boolean;
 }
+
+export type CashFlowRow = Transaction & { _readonly?: boolean };
 
 export const EMPTY_FORM: TransactionFormData = {
   description: "",
   type: "expense",
+  currency: "TRY",
   category_id: "",
   amount: "",
   date: new Date().toISOString().split("T")[0],

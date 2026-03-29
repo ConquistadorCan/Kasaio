@@ -12,6 +12,7 @@ class Transaction(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     type: Mapped[TransactionTypeEnum] = mapped_column(Enum(TransactionTypeEnum), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="TRY")
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now())
     description: Mapped[str] = mapped_column(String(255), nullable=True)
 

@@ -15,6 +15,7 @@ export interface Holding {
   asset_id: number;
   quantity: number;
   average_cost: number;
+  realized_pnl: number;
   cost_basis: number;
   current_value: number | null;
   pnl: number | null;
@@ -37,32 +38,18 @@ export interface AssetPrice {
   recorded_at: string;
 }
 
-export interface ExchangeRate {
-  id: number;
-  currency: Currency;
-  rate: number;
-  recorded_at: string;
-}
-
 export interface PortfolioHolding {
   asset: Asset;
   quantity: number;
   average_cost: number;
+  realized_pnl: number;
   cost_basis: number;
-  cost_basis_try: number | null;
   current_price: number | null;
-  current_price_try: number | null;
   current_value: number | null;
-  current_value_try: number | null;
   pnl: number | null;
-  pnl_try: number | null;
   pnl_pct: number | null;
 }
 
 export interface PortfolioSummary {
   holdings: PortfolioHolding[];
-  total_cost_try: number | null;
-  total_current_value_try: number | null;
-  total_pnl_try: number | null;
-  total_pnl_pct: number | null;
 }

@@ -9,6 +9,7 @@ export interface Transaction {
   id: number;
   amount: number;
   type: TransactionType;
+  currency: "TRY" | "USD";
   date: string;
   description: string | null;
   category_id: number | null;

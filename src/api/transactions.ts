@@ -4,6 +4,7 @@ import type { Transaction, TransactionType } from "../types";
 interface TransactionCreatePayload {
   amount: number;
   type: TransactionType;
+  currency?: string;
   date: string;
   description?: string | null;
   category_id?: number | null;

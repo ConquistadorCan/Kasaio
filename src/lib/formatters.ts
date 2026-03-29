@@ -22,8 +22,9 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatAmount(amount: number, type: TransactionType): string {
+export function formatAmount(amount: number, type: TransactionType, currency: string = "TRY"): string {
+  const sym = currency === "USD" ? "$" : "₺";
   return type === "income"
-    ? `+ ₺${formatCurrency(amount)}`
-    : `− ₺${formatCurrency(amount)}`;
+    ? `+ ${sym}${formatCurrency(amount)}`
+    : `− ${sym}${formatCurrency(amount)}`;
 }
