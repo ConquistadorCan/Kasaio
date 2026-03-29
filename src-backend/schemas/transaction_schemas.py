@@ -8,9 +8,17 @@ from models.transaction import TransactionTypeEnum
 class TransactionCreateSchema(BaseModel):
     amount: float
     type: TransactionTypeEnum
+    currency: str = "TRY"
     description: str | None = None
     date: datetime
     category_id: int | None = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
     @field_validator("amount")
     @classmethod
@@ -26,6 +34,13 @@ class TransactionUpdateSchema(BaseModel):
     description: str | None = None
     date: datetime | None = None
     category_id: int | None = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
     @field_validator("amount")
     @classmethod
@@ -51,6 +66,7 @@ class TransactionResponseSchema(BaseModel):
     id: int
     amount: float
     type: TransactionTypeEnum
+    currency: str
     description: str | None
     date: datetime
     category_id: int | None

@@ -3,17 +3,18 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { transactionsApi } from "../../api/transactions";
 import { useAppStore } from "../../store/useAppStore";
+import { useInvestmentStore } from "../../store/useInvestmentStore";
 import { logError } from "../../lib/logger";
 import { TransactionModal } from "../../components/transactions/TransactionModal";
 import { TransactionTable } from "../../components/transactions/TransactionTable";
 import { TransactionFilters } from "../../components/transactions/TransactionFilters";
-import { type FilterType, type TransactionFormData } from "../../components/transactions/types";
+import { type FilterType, type TransactionFormData, type CashFlowRow } from "../../components/transactions/types";
 import { type DateRange } from "../../components/transactions/DateRangePicker";
 import type { Transaction } from "../../types";
-
 export function Transactions() {
   const { transactions, categories, addTransaction, updateTransaction, deleteTransaction } =
     useAppStore();
+  const { investmentTransactions, assets: investmentAssets } = useInvestmentStore();
 
   const [filter, setFilter] = useState<FilterType>("all");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
@@ -36,6 +37,37 @@ export function Transactions() {
       return sortOrder === "desc" ? -diff : diff;
     });
 
+  const investmentRows: CashFlowRow[] = investmentTransactions.map((t) => {
+    const asset = investmentAssets.find((a) => a.id === t.asset_id);
+    const isBuy = t.transaction_type === "BUY";
+    const label = t.transaction_type === "BUY" ? "Buy" : t.transaction_type === "SELL" ? "Sale" : "Income";
+    return {
+      id: 2_000_000 + t.id,
+      description: `${label}: ${asset?.name ?? t.asset_id}`,
+      type: isBuy ? "expense" : "income",
+      currency: (asset?.currency ?? "TRY") as "TRY" | "USD",
+      category_id: null,
+      amount: t.quantity * t.price,
+      date: t.date,
+      _readonly: true,
+    };
+  });
+
+  const filteredInvestmentRows = investmentRows
+    .filter((r) => filter === "all" || r.type === filter)
+    .filter((r) => {
+      if (!dateRange) return true;
+      const date = new Date(r.date).getTime();
+      const from = new Date(dateRange.from + "T00:00:00").getTime();
+      const to = new Date(dateRange.to + "T23:59:59").getTime();
+      return date >= from && date <= to;
+    });
+
+  const allRows: CashFlowRow[] = [...filtered, ...filteredInvestmentRows].sort((a, b) => {
+    const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+    return sortOrder === "desc" ? -diff : diff;
+  });
+
   function getCategoryName(category_id: number | null): string {
     if (!category_id) return "—";
     return categories.find((c) => c.id === category_id)?.name ?? "—";
@@ -47,6 +79,7 @@ export function Transactions() {
       const created = await transactionsApi.create({
         amount: Number(data.amount),
         type: data.type,
+        currency: data.currency,
         description: data.description || null,
         date: new Date(data.date).toISOString(),
         category_id: data.category_id && data.category_id !== "none" ? Number(data.category_id) : null,
@@ -96,6 +129,7 @@ export function Transactions() {
     ? {
         description: editing.description ?? "",
         type: editing.type,
+        currency: editing.currency,
         category_id: editing.category_id ? String(editing.category_id) : "",
         amount: String(editing.amount),
         date: editing.date.split("T")[0],
@@ -107,7 +141,7 @@ export function Transactions() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white">Transactions</h1>
-          <p className="text-sm text-white/40 mt-0.5">{transactions.length} total</p>
+          <p className="text-sm text-white/40 mt-0.5">{transactions.length + investmentTransactions.length} total</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -126,11 +160,11 @@ export function Transactions() {
       />
 
       <TransactionTable
-        transactions={filtered}
+        transactions={allRows}
         sortOrder={sortOrder}
         onSortToggle={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
         getCategoryName={getCategoryName}
-        onEdit={setEditing}
+        onEdit={(t) => { if (!t._readonly) setEditing(t as Transaction); }}
         onDelete={handleDelete}
       />
 

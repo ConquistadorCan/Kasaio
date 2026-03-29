@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Wallet, ArrowRight, BarChart2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,6 +10,8 @@ import { useInvestmentStore } from "../store/useInvestmentStore";
 import { formatCurrency, formatDateShort } from "../lib/formatters";
 import type { TransactionType } from "../types";
 import { cn } from "../lib/utils";
+
+type WalletView = "TRY" | "USD";
 
 function getLast6Months(): { key: string; label: string }[] {
   const months = [];
@@ -32,9 +34,10 @@ interface StatCardProps {
   subColor?: string;
   icon: React.ReactNode;
   variant: "income" | "expense" | "neutral" | "violet";
+  symbol?: string;
 }
 
-function StatCard({ label, value, sub, subColor, icon, variant }: StatCardProps) {
+function StatCard({ label, value, sub, subColor, icon, variant, symbol = "₺" }: StatCardProps) {
   const colors = {
     income: "text-emerald-400",
     expense: "text-red-400",
@@ -59,7 +62,7 @@ function StatCard({ label, value, sub, subColor, icon, variant }: StatCardProps)
         )}
       </div>
       <span className={cn("text-2xl font-semibold tracking-tight font-mono", colors[variant])}>
-        ₺{value}
+        {symbol}{value}
       </span>
     </div>
   );
@@ -69,16 +72,17 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: { value: number; name: string }[];
   label?: string;
+  symbol?: string;
 }
 
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({ active, payload, label, symbol = "₺" }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#141422] border border-white/10 rounded-lg px-3 py-2 text-xs">
       <p className="text-white/50 mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className={p.name === "income" ? "text-emerald-400" : "text-red-400"}>
-          {p.name === "income" ? "Income" : "Expense"}: ₺{formatCurrency(p.value)}
+          {p.name === "income" ? "Income" : "Expense"}: {symbol}{formatCurrency(p.value)}
         </p>
       ))}
     </div>
@@ -91,84 +95,160 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { transactions, categories } = useAppStore();
   const { assets, holdings, latestPrices, investmentTransactions } = useInvestmentStore();
+  const [walletView, setWalletView] = useState<WalletView>("TRY");
 
-  // ── Cash Flow ───────────────────────────────────────────────────────────
+  const sym = walletView === "USD" ? "$" : "₺";
+
+  // ── Wallet-filtered data ────────────────────────────────────────────────────
+  const walletTxns = useMemo(
+    () => transactions.filter((t) => t.currency === walletView),
+    [transactions, walletView]
+  );
+
+  const walletAssets = useMemo(
+    () => assets.filter((a) => a.currency === walletView),
+    [assets, walletView]
+  );
+
+  const walletHoldings = useMemo(
+    () => holdings.filter((h) => walletAssets.some((a) => a.id === h.asset_id)),
+    [holdings, walletAssets]
+  );
+
+  const walletInvestmentTxns = useMemo(
+    () => investmentTransactions.filter((t) => walletAssets.some((a) => a.id === t.asset_id)),
+    [investmentTransactions, walletAssets]
+  );
+
+  // ── Cash Flow ───────────────────────────────────────────────────────────────
   const { totalIncome, totalExpense, netBalance } = useMemo(() => {
-    const totalIncome = transactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + t.amount, 0);
-    const totalExpense = transactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + t.amount, 0);
+    const txnIncome = walletTxns.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + t.amount, 0);
+    const txnExpense = walletTxns.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + t.amount, 0);
+    const invIncome = walletInvestmentTxns.filter((t) => t.transaction_type === "SELL" || t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const invExpense = walletInvestmentTxns.filter((t) => t.transaction_type === "BUY").reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalIncome = txnIncome + invIncome;
+    const totalExpense = txnExpense + invExpense;
     return { totalIncome, totalExpense, netBalance: totalIncome - totalExpense };
-  }, [transactions]);
+  }, [walletTxns, walletInvestmentTxns]);
 
-  // ── Portfolio ───────────────────────────────────────────────────────────
+  // ── Portfolio ───────────────────────────────────────────────────────────────
   const { portfolioValue, portfolioPnl, portfolioPnlPct } = useMemo(() => {
-    const portfolioValue = holdings.reduce((sum, h) => {
+    const activeHoldings = walletHoldings.filter((h) => h.quantity > 0);
+    const portfolioValue = activeHoldings.reduce((sum, h) => {
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
       return sum + price * h.quantity;
     }, 0);
-    const portfolioCost = holdings.reduce((sum, h) => sum + h.average_cost * h.quantity, 0);
-    const portfolioPnl = portfolioValue - portfolioCost;
+    const portfolioCost = activeHoldings.reduce((sum, h) => sum + h.average_cost * h.quantity, 0);
+    const portfolioRealizedPnl = walletHoldings.reduce((sum, h) => sum + (h.realized_pnl ?? 0), 0);
+    const portfolioIncome = walletInvestmentTxns
+      .filter((t) => t.transaction_type === "INCOME")
+      .reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const portfolioPnl = (portfolioValue - portfolioCost) + portfolioRealizedPnl + portfolioIncome;
     const portfolioPnlPct = portfolioCost > 0 ? (portfolioPnl / portfolioCost) * 100 : 0;
     return { portfolioValue, portfolioPnl, portfolioPnlPct };
-  }, [holdings, latestPrices]);
+  }, [walletHoldings, walletInvestmentTxns, latestPrices]);
 
-  const netWorth = netBalance + portfolioValue;
+  const walletTotal = netBalance + portfolioValue;
 
-  // ── Monthly chart ───────────────────────────────────────────────────────
+  // ── Monthly chart ───────────────────────────────────────────────────────────
   const monthlyData = useMemo(() => {
     return getLast6Months().map(({ key, label }) => {
-      const monthTxns = transactions.filter((t) => t.date.startsWith(key));
-      const income = monthTxns.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + t.amount, 0);
-      const expense = monthTxns.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + t.amount, 0);
+      const monthTxns = walletTxns.filter((t) => t.date.startsWith(key));
+      const monthInvTxns = walletInvestmentTxns.filter((t) => t.date.startsWith(key));
+      const income = monthTxns.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + t.amount, 0)
+        + monthInvTxns.filter((t) => t.transaction_type === "SELL" || t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
+      const expense = monthTxns.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + t.amount, 0)
+        + monthInvTxns.filter((t) => t.transaction_type === "BUY").reduce((sum, t) => sum + t.quantity * t.price, 0);
       return { label, income, expense };
     });
-  }, [transactions]);
+  }, [walletTxns, walletInvestmentTxns]);
 
-  // ── Category breakdown ──────────────────────────────────────────────────
+  // ── Category breakdown ──────────────────────────────────────────────────────
   const categoryBreakdown = useMemo(() => {
     if (categories.length === 0) return [];
-    const expenses = transactions.filter((t) => t.type.toLowerCase() === "expense" && t.category_id);
+    const expenses = walletTxns.filter((t) => t.type.toLowerCase() === "expense" && t.category_id);
     const total = expenses.reduce((sum, t) => sum + t.amount, 0);
     return categories.map((cat) => {
       const amount = expenses.filter((t) => t.category_id === cat.id).reduce((sum, t) => sum + t.amount, 0);
       return { name: cat.name, amount, percentage: total > 0 ? (amount / total) * 100 : 0 };
     }).filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5);
-  }, [transactions, categories]);
+  }, [walletTxns, categories]);
 
-  // ── Asset allocation ────────────────────────────────────────────────────
+  // ── Asset allocation ────────────────────────────────────────────────────────
   const assetAllocation = useMemo(() => {
-    return holdings.map((h) => {
-      const asset = assets.find((a) => a.id === h.asset_id);
+    return walletHoldings.map((h) => {
+      const asset = walletAssets.find((a) => a.id === h.asset_id);
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
       return { name: asset?.name ?? "Unknown", value: price * h.quantity };
     }).filter((a) => a.value > 0);
-  }, [holdings, assets, latestPrices]);
+  }, [walletHoldings, walletAssets, latestPrices]);
 
-  // ── Holdings rows ───────────────────────────────────────────────────────
+  // ── Holdings rows ───────────────────────────────────────────────────────────
   const holdingRows = useMemo(() => {
-    return holdings.map((h) => {
-      const asset = assets.find((a) => a.id === h.asset_id);
+    return walletHoldings.map((h) => {
+      const asset = walletAssets.find((a) => a.id === h.asset_id);
       const price = latestPrices[h.asset_id]?.price ?? null;
       const currentValue = price !== null ? price * h.quantity : null;
       const costBasis = h.average_cost * h.quantity;
-      const pnl = currentValue !== null ? currentValue - costBasis : null;
+      const realizedPnl = h.realized_pnl ?? 0;
+      const pnl = currentValue !== null
+        ? (currentValue - costBasis) + realizedPnl
+        : realizedPnl !== 0 ? realizedPnl : null;
       const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
       return { asset, holding: h, price, currentValue, pnl, pnlPct };
     });
-  }, [holdings, assets, latestPrices]);
+  }, [walletHoldings, walletAssets, latestPrices]);
 
-  // ── Recent transactions ─────────────────────────────────────────────────
+  // ── Recent ──────────────────────────────────────────────────────────────────
   const recentCashFlow = useMemo(() => {
-    return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-  }, [transactions]);
+    const invRows = walletInvestmentTxns.map((t) => {
+      const asset = walletAssets.find((a) => a.id === t.asset_id);
+      const label = t.transaction_type === "BUY" ? "Buy" : t.transaction_type === "SELL" ? "Sale" : "Income";
+      return {
+        id: 2_000_000 + t.id,
+        description: `${label}: ${asset?.name ?? ""}`,
+        type: (t.transaction_type === "BUY" ? "expense" : "income") as "income" | "expense",
+        currency: (asset?.currency ?? walletView) as "TRY" | "USD",
+        category_id: null,
+        amount: t.quantity * t.price,
+        date: t.date,
+      };
+    });
+    return [...walletTxns, ...invRows]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [walletTxns, walletInvestmentTxns, walletAssets, walletView]);
 
-  const recentInvestments = useMemo(() => {
-    return [...investmentTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-  }, [investmentTransactions]);
+  const recentInvestments = useMemo(
+    () => [...walletInvestmentTxns].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    [walletInvestmentTxns]
+  );
 
   const TYPE_COLORS: Record<TransactionType, string> = { income: "#34d399", expense: "#f87171" };
 
   return (
     <div className="flex flex-col gap-5 h-full overflow-y-auto pb-6">
+
+      {/* ── Wallet toggle ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
+        </div>
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+          {(["TRY", "USD"] as WalletView[]).map((w) => (
+            <button
+              key={w}
+              onClick={() => setWalletView(w)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
+                walletView === w ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+              )}
+            >
+              {w === "TRY" ? "₺ TRY" : "$ USD"}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Section 1: Overview ── */}
       <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
@@ -177,16 +257,17 @@ export function Dashboard() {
           <p className="text-base font-semibold text-white">Overview</p>
         </div>
         <div className="flex gap-4">
-          <StatCard label="Cash Balance" value={formatCurrency(netBalance)} icon={<Wallet size={15} />} variant="neutral" />
+          <StatCard label="Cash Balance" value={formatCurrency(netBalance)} symbol={sym} icon={<Wallet size={15} />} variant="neutral" />
           <StatCard
-            label="Portfolio Value"
+            label="Portfolio"
             value={formatCurrency(portfolioValue)}
+            symbol={sym}
             sub={`${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`}
             subColor={portfolioPnl >= 0 ? "text-emerald-400" : "text-red-400"}
             icon={<BarChart2 size={15} />}
             variant="violet"
           />
-          <StatCard label="Net Worth" value={formatCurrency(netWorth)} icon={<Wallet size={15} />} variant="neutral" />
+          <StatCard label="Total" value={formatCurrency(walletTotal)} symbol={sym} icon={<Wallet size={15} />} variant="neutral" />
         </div>
       </div>
 
@@ -197,23 +278,23 @@ export function Dashboard() {
           <p className="text-base font-semibold text-white">Cash Flow</p>
         </div>
         <div className="flex gap-4 mb-4">
-          <StatCard label="Total Income" value={formatCurrency(totalIncome)} icon={<TrendingUp size={15} />} variant="income" />
-          <StatCard label="Total Expenses" value={formatCurrency(totalExpense)} icon={<TrendingDown size={15} />} variant="expense" />
+          <StatCard label="Total Income" value={formatCurrency(totalIncome)} symbol={sym} icon={<TrendingUp size={15} />} variant="income" />
+          <StatCard label="Total Expenses" value={formatCurrency(totalExpense)} symbol={sym} icon={<TrendingDown size={15} />} variant="expense" />
         </div>
 
         <div className="grid grid-cols-[1fr_220px] gap-4">
           {/* Bar chart */}
           <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
             <p className="text-sm font-medium text-white mb-1">Income vs Expenses</p>
-            <p className="text-xs text-white/30 mb-4">Last 6 months</p>
-            {transactions.length === 0 ? (
+            <p className="text-xs text-white/30 mb-4">Last 6 months · {walletView} wallet</p>
+            {walletTxns.length === 0 ? (
               <div className="flex items-center justify-center h-36"><p className="text-sm text-white/20">No data yet</p></div>
             ) : (
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={monthlyData} barSize={10} barGap={3}>
                   <XAxis dataKey="label" tick={{ fill: "rgba(240,240,250,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis hide />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                  <Tooltip content={<CustomTooltip symbol={sym} />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
                   <Bar dataKey="income" radius={[4, 4, 0, 0]}>
                     {monthlyData.map((_, i) => <Cell key={i} fill="#34d399" opacity={0.8} />)}
                   </Bar>
@@ -272,7 +353,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <span className={cn("text-sm font-medium font-mono", t.type.toLowerCase() === "income" ? "text-emerald-400" : "text-red-400")}>
-                  {t.type.toLowerCase() === "income" ? "+" : "−"}₺{formatCurrency(t.amount)}
+                  {t.type.toLowerCase() === "income" ? "+" : "−"}{sym}{formatCurrency(t.amount)}
                 </span>
               </div>
             ))
@@ -284,7 +365,7 @@ export function Dashboard() {
       <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={18} className="text-emerald-400" />
-          <p className="text-base font-semibold text-white">Portfolio</p>
+          <p className="text-base font-semibold text-white">Portfolio · {walletView}</p>
         </div>
 
         <div className="grid grid-cols-[180px_1fr] gap-4 mb-4">
@@ -317,7 +398,7 @@ export function Dashboard() {
           {/* Holdings table */}
           <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
             <div className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5">
-              {["Asset", "Qty (g)", "Value", "P&L"].map((col) => (
+              {["Asset", "Qty", "Value", "P&L"].map((col) => (
                 <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
               ))}
             </div>
@@ -332,13 +413,13 @@ export function Dashboard() {
                   </div>
                   <span className="text-sm text-white/60 font-mono">{holding.quantity.toFixed(2)}</span>
                   <span className="text-sm text-white font-mono">
-                    {currentValue !== null ? `₺${formatCurrency(currentValue)}` : "—"}
+                    {currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}
                   </span>
                   <div>
                     {pnl !== null ? (
                       <>
                         <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                          {pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(pnl))}
+                          {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
                         </p>
                         <p className={cn("text-xs font-mono", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
                           {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
@@ -366,7 +447,7 @@ export function Dashboard() {
             <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No investment transactions yet</p></div>
           ) : (
             recentInvestments.map((t) => {
-              const asset = assets.find((a) => a.id === t.asset_id);
+              const asset = walletAssets.find((a) => a.id === t.asset_id);
               const isBuy = t.transaction_type === "BUY";
               return (
                 <div key={t.id} className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
@@ -379,9 +460,9 @@ export function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className={cn("text-sm font-medium font-mono", isBuy ? "text-emerald-400" : "text-red-400")}>
-                      {isBuy ? "+" : "−"}{t.quantity.toFixed(2)}g
+                      {isBuy ? "+" : "−"}{t.quantity.toFixed(2)}
                     </p>
-                    <p className="text-xs text-white/30 font-mono">₺{formatCurrency(t.price)}/g</p>
+                    <p className="text-xs text-white/30 font-mono">{sym}{formatCurrency(t.price)}/unit</p>
                   </div>
                 </div>
               );

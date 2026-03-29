@@ -19,7 +19,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_column('investment_transactions', 'note')
     op.create_table(
         'exchange_rates',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -31,5 +30,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.add_column('investment_transactions', sa.Column('note', sa.TEXT(), nullable=True))
     op.drop_table('exchange_rates')

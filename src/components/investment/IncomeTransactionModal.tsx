@@ -4,14 +4,12 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { DayPicker } from "react-day-picker";
 import { CalendarIcon, ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { formatCurrency } from "../../lib/formatters";
 import { DAY_PICKER_CLASS_NAMES } from "../../components/transactions/types";
 import { ErrorBanner } from "../../components/ui/ErrorComponents";
-import type { Asset, Holding } from "../../types/investments";
+import { useInvestmentStore } from "../../store/useInvestmentStore";
 
 interface FormData {
   asset_id: string;
-  transaction_type: "BUY" | "SELL";
   quantity: string;
   price: string;
   date: string;
@@ -19,24 +17,15 @@ interface FormData {
 
 const EMPTY_FORM: FormData = {
   asset_id: "",
-  transaction_type: "BUY",
   quantity: "",
   price: "",
   date: new Date().toISOString().split("T")[0],
 };
 
-const TYPE_STYLES: Record<"BUY" | "SELL", string> = {
-  BUY:  "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
-  SELL: "bg-red-500/15 text-red-400 border border-red-500/25",
-};
-
-interface InvestmentTransactionModalProps {
-  mode: "add" | "edit";
-  assets: Asset[];
-  holdings?: Holding[];
+interface IncomeTransactionModalProps {
   onSubmit: (data: {
     asset_id: number;
-    transaction_type: "BUY" | "SELL";
+    transaction_type: "INCOME";
     quantity: number;
     price: number;
     date: string;
@@ -45,7 +34,8 @@ interface InvestmentTransactionModalProps {
   loading: boolean;
 }
 
-export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClose, loading }: InvestmentTransactionModalProps) {
+export function IncomeTransactionModal({ onSubmit, onClose, loading }: IncomeTransactionModalProps) {
+  const { assets, holdings } = useInvestmentStore();
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
@@ -55,18 +45,13 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
   const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
   const pickerYear = currentPickerDate.getFullYear();
 
+  const activeAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
+  const pastAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity === 0));
+  const neverHeldAssets = assets.filter((a) => !holdings.some((h) => h.asset_id === a.id));
+
   const selectedAsset = form.asset_id ? assets.find((a) => a.id === Number(form.asset_id)) : undefined;
-  const currency = selectedAsset?.currency ?? null;
-  const isSell = form.transaction_type === "SELL";
-
-  const selectedHolding = selectedAsset
-    ? holdings.find((h) => h.asset_id === selectedAsset.id)
-    : undefined;
-  const availableQty = selectedHolding ? selectedHolding.quantity : 0;
-
-  // Split assets into owned (quantity > 0) and others for SELL mode grouping
-  const ownedAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
-  const otherAssets = assets.filter((a) => !holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
+  const currency = selectedAsset?.currency ?? "TRY";
+  const currencySymbol = currency === "USD" ? "$" : "₺";
 
   function field(key: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -75,21 +60,14 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
   }
 
   function handleAssetChange(assetId: string) {
-    setForm((prev) => ({ ...prev, asset_id: assetId, quantity: "" }));
+    const holding = holdings.find((h) => h.asset_id === Number(assetId) && h.quantity > 0);
+    if (holding) {
+      setForm((prev) => ({ ...prev, asset_id: assetId, quantity: String(holding.quantity) }));
+    } else {
+      setForm((prev) => ({ ...prev, asset_id: assetId, quantity: "" }));
+    }
     setErrors((prev) => ({ ...prev, asset_id: undefined, quantity: undefined }));
     setSubmitError("");
-  }
-
-  function handleTypeChange(t: "BUY" | "SELL") {
-    setForm((prev) => ({ ...prev, transaction_type: t, asset_id: "", quantity: "" }));
-    setErrors({});
-    setSubmitError("");
-  }
-
-  function handleMaxQty() {
-    if (availableQty > 0) {
-      field("quantity", String(availableQty));
-    }
   }
 
   function validate(): boolean {
@@ -97,10 +75,8 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
     if (!form.asset_id) next.asset_id = "Required";
     if (!form.quantity || isNaN(Number(form.quantity)) || Number(form.quantity) <= 0)
       next.quantity = "Enter a valid quantity";
-    else if (isSell && selectedHolding && Number(form.quantity) > availableQty)
-      next.quantity = `Max available: ${availableQty}`;
     if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
-      next.price = "Enter a valid price";
+      next.price = "Enter a valid amount";
     if (!form.date) next.date = "Required";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -111,7 +87,7 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
     setSubmitError("");
     const err = await onSubmit({
       asset_id: Number(form.asset_id),
-      transaction_type: form.transaction_type,
+      transaction_type: "INCOME",
       quantity: Number(form.quantity),
       price: Number(form.price),
       date: form.date,
@@ -119,37 +95,13 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
     if (err) setSubmitError(err);
   }
 
-  const sym = currency === "USD" ? "$" : "₺";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-base font-semibold text-white mb-5">
-          {mode === "add" ? "Add Transaction" : "Edit Transaction"}
-        </h2>
+        <h2 className="text-base font-semibold text-white mb-1">Record Income</h2>
+        <p className="text-xs text-white/30 mb-5">Dividend, coupon, or other investment income</p>
 
         <div className="flex flex-col gap-4">
-          {/* Type */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Type</label>
-            <div className="flex gap-2">
-              {(["BUY", "SELL"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => handleTypeChange(t)}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
-                    form.transaction_type === t
-                      ? TYPE_STYLES[t]
-                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Asset */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Asset</label>
@@ -172,60 +124,70 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                   className="z-50 w-[var(--radix-select-trigger-width)] bg-[#141422] border border-white/10 rounded-lg shadow-xl overflow-hidden"
                 >
                   <SelectPrimitive.Viewport className="p-1">
-                    {isSell && ownedAssets.length > 0 ? (
+                    {activeAssets.length > 0 && (
+                      <SelectPrimitive.Group>
+                        <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                          Active Holdings
+                        </SelectPrimitive.Label>
+                        {activeAssets.map((a) => {
+                          const holding = holdings.find((h) => h.asset_id === a.id);
+                          return (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              {holding && (
+                                <span className="text-xs text-white/30 ml-3 font-mono tabular-nums">
+                                  {holding.quantity.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} units
+                                </span>
+                              )}
+                            </SelectPrimitive.Item>
+                          );
+                        })}
+                      </SelectPrimitive.Group>
+                    )}
+
+                    {pastAssets.length > 0 && (
                       <>
+                        {activeAssets.length > 0 && <div className="my-1 h-px bg-white/5" />}
                         <SelectPrimitive.Group>
-                          <SelectPrimitive.Label className="px-3 py-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-                            Your Holdings
+                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                            Past Assets
                           </SelectPrimitive.Label>
-                          {ownedAssets.map((a) => {
-                            const h = holdings.find((h) => h.asset_id === a.id);
-                            return (
-                              <SelectPrimitive.Item
-                                key={a.id}
-                                value={String(a.id)}
-                                className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                              >
-                                <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                                {h && (
-                                  <span className="text-xs text-white/40 font-mono ml-2 shrink-0">
-                                    {h.quantity.toFixed(2)}
-                                  </span>
-                                )}
-                              </SelectPrimitive.Item>
-                            );
-                          })}
+                          {pastAssets.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white/50 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              <span className="text-xs text-white/20 ml-3">sold out</span>
+                            </SelectPrimitive.Item>
+                          ))}
                         </SelectPrimitive.Group>
-                        {otherAssets.length > 0 && (
-                          <>
-                            <SelectPrimitive.Separator className="my-1 h-px bg-white/5" />
-                            <SelectPrimitive.Group>
-                              <SelectPrimitive.Label className="px-3 py-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-                                Other Assets
-                              </SelectPrimitive.Label>
-                              {otherAssets.map((a) => (
-                                <SelectPrimitive.Item
-                                  key={a.id}
-                                  value={String(a.id)}
-                                  className="flex items-center px-3 py-2 text-sm text-white/30 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/50 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                                >
-                                  <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                                </SelectPrimitive.Item>
-                              ))}
-                            </SelectPrimitive.Group>
-                          </>
-                        )}
                       </>
-                    ) : (
-                      assets.map((a) => (
-                        <SelectPrimitive.Item
-                          key={a.id}
-                          value={String(a.id)}
-                          className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                        >
-                          <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                        </SelectPrimitive.Item>
-                      ))
+                    )}
+
+                    {neverHeldAssets.length > 0 && (
+                      <>
+                        {(activeAssets.length > 0 || pastAssets.length > 0) && <div className="my-1 h-px bg-white/5" />}
+                        <SelectPrimitive.Group>
+                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                            All Assets
+                          </SelectPrimitive.Label>
+                          {neverHeldAssets.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/60 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                            </SelectPrimitive.Item>
+                          ))}
+                        </SelectPrimitive.Group>
+                      </>
                     )}
                   </SelectPrimitive.Viewport>
                 </SelectPrimitive.Content>
@@ -234,42 +196,9 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
             {errors.asset_id && <p className="text-xs text-red-400 mt-1">{errors.asset_id}</p>}
           </div>
 
-          {/* Holdings info strip — SELL mode only */}
-          {isSell && selectedAsset && (
-            <div className={cn(
-              "flex items-center justify-between rounded-lg px-3 py-2.5 text-xs border",
-              selectedHolding && availableQty > 0
-                ? "bg-amber-500/8 border-amber-500/20 text-amber-300/80"
-                : "bg-white/[0.03] border-white/[0.06] text-white/30"
-            )}>
-              {selectedHolding && availableQty > 0 ? (
-                <>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">
-                      You hold <span className="font-mono">{availableQty.toFixed(2)}</span> {selectedAsset.symbol}
-                    </span>
-                    <span className="text-amber-300/50">
-                      Avg cost: {sym}{formatCurrency(selectedHolding.average_cost)}
-                      {" · "}
-                      Total: {sym}{formatCurrency(selectedHolding.average_cost * availableQty)}
-                    </span>
-                  </div>
-                  <button
-                    onClick={handleMaxQty}
-                    className="ml-3 shrink-0 px-2 py-1 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors font-medium"
-                  >
-                    Max
-                  </button>
-                </>
-              ) : (
-                <span>You don't hold any {selectedAsset.symbol}</span>
-              )}
-            </div>
-          )}
-
-          {/* Quantity */}
+          {/* Units held */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Quantity</label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Units held</label>
             <input
               type="number"
               value={form.quantity}
@@ -284,10 +213,10 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
             {errors.quantity && <p className="text-xs text-red-400 mt-1">{errors.quantity}</p>}
           </div>
 
-          {/* Price */}
+          {/* Income per unit */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">
-              {currency ? `Price per unit (${currency})` : "Price per unit"}
+              Income per unit ({currency})
             </label>
             <input
               type="number"
@@ -301,6 +230,16 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
               )}
             />
             {errors.price && <p className="text-xs text-red-400 mt-1">{errors.price}</p>}
+          </div>
+
+          {/* Total preview */}
+          <div className="flex items-center justify-between px-3 py-2 bg-amber-500/5 border border-amber-500/15 rounded-lg">
+            <span className="text-xs text-white/40">Total income</span>
+            <span className="text-sm font-mono font-medium text-amber-400">
+              {form.quantity && form.price && !isNaN(Number(form.quantity)) && !isNaN(Number(form.price))
+                ? `${currencySymbol}${(Number(form.quantity) * Number(form.price)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : "—"}
+            </span>
           </div>
 
           {/* Date */}
@@ -328,15 +267,10 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                   <div className="flex items-center justify-between mb-3">
                     <button
                       onClick={() => {
-                        if (pickerView === "day") {
-                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                          d.setMonth(d.getMonth() - 1);
-                          field("date", d.toISOString().split("T")[0]);
-                        } else {
-                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                          d.setFullYear(d.getFullYear() - 1);
-                          field("date", d.toISOString().split("T")[0]);
-                        }
+                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                        if (pickerView === "day") d.setMonth(d.getMonth() - 1);
+                        else d.setFullYear(d.getFullYear() - 1);
+                        field("date", d.toISOString().split("T")[0]);
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
                     >‹</button>
@@ -356,15 +290,10 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                     )}
                     <button
                       onClick={() => {
-                        if (pickerView === "day") {
-                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                          d.setMonth(d.getMonth() + 1);
-                          field("date", d.toISOString().split("T")[0]);
-                        } else {
-                          const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                          d.setFullYear(d.getFullYear() + 1);
-                          field("date", d.toISOString().split("T")[0]);
-                        }
+                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                        if (pickerView === "day") d.setMonth(d.getMonth() + 1);
+                        else d.setFullYear(d.getFullYear() + 1);
+                        field("date", d.toISOString().split("T")[0]);
                       }}
                       className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
                     >›</button>
@@ -374,7 +303,6 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                     <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
                       {Array.from({ length: 12 }, (_, i) => {
                         const year = pickerYear - 6 + i;
-                        const isSelected = pickerYear === year;
                         return (
                           <button
                             key={year}
@@ -386,9 +314,7 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                             }}
                             className={cn(
                               "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
-                              isSelected
-                                ? "bg-violet-500/30 text-violet-300"
-                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                              pickerYear === year ? "bg-violet-500/30 text-violet-300" : "text-white/60 hover:bg-white/5 hover:text-white"
                             )}
                           >
                             {year}
@@ -400,7 +326,6 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                     <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
                       {Array.from({ length: 12 }, (_, i) => {
                         const label = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
-                        const isSelected = currentPickerDate.getMonth() === i;
                         return (
                           <button
                             key={i}
@@ -412,9 +337,7 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                             }}
                             className={cn(
                               "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
-                              isSelected
-                                ? "bg-violet-500/30 text-violet-300"
-                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                              currentPickerDate.getMonth() === i ? "bg-violet-500/30 text-violet-300" : "text-white/60 hover:bg-white/5 hover:text-white"
                             )}
                           >
                             {label}
@@ -466,9 +389,9 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
+            className="flex-1 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-500 transition-colors disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Saving..." : "Record Income"}
           </button>
         </div>
       </div>

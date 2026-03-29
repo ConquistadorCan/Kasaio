@@ -13,15 +13,16 @@ logger = logging.getLogger("kasaio")
 def _calculate_holding_response(holding: Holding, latest_price: float | None) -> HoldingResponse:
     quantity = float(holding.quantity)
     average_cost = float(holding.average_cost)
+    realized_pnl = float(holding.realized_pnl)
     cost_basis = average_cost * quantity
 
     if latest_price is not None:
         current_value = latest_price * quantity
-        pnl = current_value - cost_basis
+        pnl = (current_value - cost_basis) + realized_pnl
         pnl_pct = (pnl / cost_basis) * 100 if cost_basis != 0 else None
     else:
         current_value = None
-        pnl = None
+        pnl = realized_pnl if realized_pnl != 0 else None
         pnl_pct = None
 
     return HoldingResponse(
@@ -29,6 +30,7 @@ def _calculate_holding_response(holding: Holding, latest_price: float | None) ->
         asset_id=holding.asset_id,
         quantity=quantity,
         average_cost=average_cost,
+        realized_pnl=realized_pnl,
         cost_basis=cost_basis,
         current_value=current_value,
         pnl=pnl,

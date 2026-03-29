@@ -11,5 +11,6 @@ class Holding(Base):
     asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"), nullable=False, unique=True)
     quantity: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
     average_cost: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
+    realized_pnl: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False, default=0)
 
     asset: Mapped["Asset"] = relationship("Asset", back_populates="holdings")

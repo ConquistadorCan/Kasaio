@@ -17,11 +17,9 @@ interface TransactionModalProps {
   loading: boolean;
 }
 
-const SYSTEM_CATEGORY_NAMES = new Set(["Investment Income", "Investment", "Investment Sale"]);
-
 export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose, loading }: TransactionModalProps) {
   const allCategories = useAppStore((s) => s.categories);
-  const categories = allCategories.filter((c) => !SYSTEM_CATEGORY_NAMES.has(c.name));
+  const categories = allCategories;
   const [form, setForm] = useState<TransactionFormData>(initial);
   const [errors, setErrors] = useState<Partial<TransactionFormData>>({});
   const [submitError, setSubmitError] = useState("");
@@ -61,6 +59,27 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
         </h2>
 
         <div className="flex flex-col gap-4">
+          {/* Wallet */}
+          <div>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Wallet</label>
+            <div className="flex gap-2">
+              {(["TRY", "USD"] as const).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => field("currency", c)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
+                    form.currency === c
+                      ? "bg-violet-500/15 text-violet-300 border border-violet-500/25"
+                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
+                  )}
+                >
+                  {c === "TRY" ? "₺ TRY" : "$ USD"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Type */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Type</label>
@@ -100,7 +119,9 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
 
           {/* Amount */}
           <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Amount (₺)</label>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">
+              Amount ({form.currency === "USD" ? "$" : "₺"})
+            </label>
             <input
               type="number"
               value={form.amount}

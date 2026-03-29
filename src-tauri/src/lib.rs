@@ -51,7 +51,7 @@ fn frontend_ready(app: tauri::AppHandle) {
 async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
     use tauri::Emitter;
     let health_url = format!("http://127.0.0.1:{}/health", port);
-    let max_attempts = 5;
+    let max_attempts = 20;
 
     for attempt in 1..=max_attempts {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -183,6 +183,15 @@ mod dev {
 
     pub fn kill(app: &tauri::AppHandle) {
         if let Some(mut child) = app.state::<Child>().0.lock().unwrap().take() {
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                let pid = child.id();
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .creation_flags(0x08000000)
+                    .output();
+            }
             let _ = child.kill();
         }
     }
