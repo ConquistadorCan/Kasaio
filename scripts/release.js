@@ -104,10 +104,17 @@ if (status) {
   console.log("Nothing to commit — version bump already committed.");
 }
 
-// 10. Create tag (skip if tag already exists)
+// 10. Create tag
 const existingTags = run("git tag").split("\n");
 if (existingTags.includes(`v${newVersion}`)) {
-  console.log(`Tag v${newVersion} already exists — skipping.`);
+  if (isRetry) {
+    console.log(`Tag v${newVersion} already exists — deleting and re-pushing to retrigger CI.`);
+    run(`git push origin :refs/tags/v${newVersion}`);
+    run(`git tag -f v${newVersion}`);
+  } else {
+    console.error(`Tag v${newVersion} already exists.`);
+    process.exit(1);
+  }
 } else {
   run(`git tag v${newVersion}`);
 }
