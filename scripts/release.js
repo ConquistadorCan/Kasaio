@@ -95,12 +95,22 @@ if (isRetry) {
   console.log(`Version bumped: ${currentVersion} → ${newVersion}`);
 }
 
-// 9. Commit version bump
+// 9. Commit version bump (skip if nothing to commit)
 run("git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-backend/main.py");
-run(`git commit -m "chore: bump version to ${newVersion}"`);
+const status = run("git status --porcelain");
+if (status) {
+  run(`git commit -m "chore: bump version to ${newVersion}"`);
+} else {
+  console.log("Nothing to commit — version bump already committed.");
+}
 
-// 10. Create tag
-run(`git tag v${newVersion}`);
+// 10. Create tag (skip if tag already exists)
+const existingTags = run("git tag").split("\n");
+if (existingTags.includes(`v${newVersion}`)) {
+  console.log(`Tag v${newVersion} already exists — skipping.`);
+} else {
+  run(`git tag v${newVersion}`);
+}
 
 // 11. Push
 run("git push origin main");
