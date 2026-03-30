@@ -185,19 +185,24 @@ export function Dashboard() {
 
   // ── Holdings rows ───────────────────────────────────────────────────────────
   const holdingRows = useMemo(() => {
-    return walletHoldings.map((h) => {
-      const asset = walletAssets.find((a) => a.id === h.asset_id);
-      const price = latestPrices[h.asset_id]?.price ?? null;
-      const currentValue = price !== null ? price * h.quantity : null;
-      const costBasis = h.average_cost * h.quantity;
-      const realizedPnl = h.realized_pnl ?? 0;
-      const pnl = currentValue !== null
-        ? (currentValue - costBasis) + realizedPnl
-        : realizedPnl !== 0 ? realizedPnl : null;
-      const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
-      return { asset, holding: h, price, currentValue, pnl, pnlPct };
-    });
-  }, [walletHoldings, walletAssets, latestPrices]);
+    return walletHoldings
+      .filter((h) => h.quantity > 0)
+      .map((h) => {
+        const asset = walletAssets.find((a) => a.id === h.asset_id);
+        const price = latestPrices[h.asset_id]?.price ?? null;
+        const currentValue = price !== null ? price * h.quantity : null;
+        const costBasis = h.average_cost * h.quantity;
+        const realizedPnl = h.realized_pnl ?? 0;
+        const totalIncome = walletInvestmentTxns
+          .filter((t) => t.asset_id === h.asset_id && t.transaction_type === "INCOME")
+          .reduce((sum, t) => sum + t.quantity * t.price, 0);
+        const pnl = currentValue !== null
+          ? (currentValue - costBasis) + realizedPnl + totalIncome
+          : (realizedPnl + totalIncome) !== 0 ? (realizedPnl + totalIncome) : null;
+        const pnlPct = pnl !== null && costBasis > 0 ? (pnl / costBasis) * 100 : null;
+        return { asset, holding: h, price, currentValue, pnl, pnlPct };
+      });
+  }, [walletHoldings, walletAssets, walletInvestmentTxns, latestPrices]);
 
   // ── Recent ──────────────────────────────────────────────────────────────────
   const recentCashFlow = useMemo(() => {

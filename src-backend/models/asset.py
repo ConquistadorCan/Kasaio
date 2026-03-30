@@ -1,4 +1,7 @@
-from sqlalchemy import String
+from datetime import date
+from typing import Optional
+
+from sqlalchemy import String, Date, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -14,6 +17,13 @@ class Asset(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(nullable=False)
     currency: Mapped[Currency] = mapped_column(nullable=False)
+
+    # Eurobond-specific (nullable for all other asset types)
+    maturity_date: Mapped[Optional[date]] = mapped_column(Date(), nullable=True)
+    coupon_rate: Mapped[Optional[float]] = mapped_column(Numeric(8, 6), nullable=True)
+    coupon_frequency: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
+    first_coupon_date: Mapped[Optional[date]] = mapped_column(Date(), nullable=True)
+    face_value: Mapped[Optional[float]] = mapped_column(Numeric(18, 8), nullable=True)
 
     investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(
         "InvestmentTransaction", back_populates="asset"

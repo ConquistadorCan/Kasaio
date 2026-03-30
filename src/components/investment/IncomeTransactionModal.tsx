@@ -32,11 +32,19 @@ interface IncomeTransactionModalProps {
   }) => Promise<string | undefined>;
   onClose: () => void;
   loading: boolean;
+  prefillAssetId?: number;
+  prefillQuantity?: number;
+  prefillPricePerUnit?: number;
 }
 
-export function IncomeTransactionModal({ onSubmit, onClose, loading }: IncomeTransactionModalProps) {
+export function IncomeTransactionModal({ onSubmit, onClose, loading, prefillAssetId, prefillQuantity, prefillPricePerUnit }: IncomeTransactionModalProps) {
   const { assets, holdings } = useInvestmentStore();
-  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+  const [form, setForm] = useState<FormData>({
+    ...EMPTY_FORM,
+    asset_id: prefillAssetId != null ? String(prefillAssetId) : "",
+    quantity: prefillQuantity != null ? String(prefillQuantity) : "",
+    price: prefillPricePerUnit != null ? String(prefillPricePerUnit) : "",
+  });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
   const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
@@ -138,11 +146,14 @@ export function IncomeTransactionModal({ onSubmit, onClose, loading }: IncomeTra
                               className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
                             >
                               <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                              {holding && (
-                                <span className="text-xs text-white/30 ml-3 font-mono tabular-nums">
-                                  {holding.quantity.toLocaleString("tr-TR", { maximumFractionDigits: 6 })} units
-                                </span>
-                              )}
+                              <span className="flex items-center gap-2 shrink-0 ml-2">
+                                {holding && (
+                                  <span className="text-xs text-white/30 font-mono tabular-nums">
+                                    {holding.quantity.toLocaleString("tr-TR", { maximumFractionDigits: 6 })}
+                                  </span>
+                                )}
+                                <span className="font-mono text-xs text-white/35">{a.symbol}</span>
+                              </span>
                             </SelectPrimitive.Item>
                           );
                         })}
@@ -163,7 +174,10 @@ export function IncomeTransactionModal({ onSubmit, onClose, loading }: IncomeTra
                               className="flex items-center justify-between px-3 py-2 text-sm text-white/50 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
                             >
                               <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                              <span className="text-xs text-white/20 ml-3">sold out</span>
+                              <span className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-xs text-white/20">sold out</span>
+                                <span className="font-mono text-xs text-white/25">{a.symbol}</span>
+                              </span>
                             </SelectPrimitive.Item>
                           ))}
                         </SelectPrimitive.Group>
@@ -181,9 +195,10 @@ export function IncomeTransactionModal({ onSubmit, onClose, loading }: IncomeTra
                             <SelectPrimitive.Item
                               key={a.id}
                               value={String(a.id)}
-                              className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/60 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/60 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
                             >
                               <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              <span className="font-mono text-xs text-white/25 shrink-0 ml-2">{a.symbol}</span>
                             </SelectPrimitive.Item>
                           ))}
                         </SelectPrimitive.Group>

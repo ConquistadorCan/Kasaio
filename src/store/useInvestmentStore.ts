@@ -13,6 +13,7 @@ interface InvestmentStore {
   setLatestPrice: (assetId: number, price: AssetPrice) => void;
   addInvestmentTransaction: (txn: InvestmentTransaction) => void;
   refreshHolding: (holding: Holding) => void;
+  refreshAsset: (asset: Asset) => void;
 }
 
 export const useInvestmentStore = create<InvestmentStore>((set) => ({
@@ -37,4 +38,6 @@ export const useInvestmentStore = create<InvestmentStore>((set) => ({
           : [...s.holdings, holding],
       };
     }),
+  refreshAsset: (asset) =>
+    set((s) => ({ assets: s.assets.map((a) => (a.id === asset.id ? asset : a)) })),
 }));

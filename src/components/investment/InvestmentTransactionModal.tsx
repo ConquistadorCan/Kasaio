@@ -30,6 +30,26 @@ const TYPE_STYLES: Record<"BUY" | "SELL", string> = {
   SELL: "bg-red-500/15 text-red-400 border border-red-500/25",
 };
 
+const ASSET_TYPE_LABELS: Record<string, string> = {
+  COMMODITY:      "Commodities",
+  CRYPTOCURRENCY: "Crypto",
+  TEFAS_FUND:     "TEFAS Funds",
+  ETF:            "ETFs",
+  EUROBOND:       "Eurobonds",
+};
+
+function groupByType(assets: Asset[]): { type: string; label: string; items: Asset[] }[] {
+  const order = ["COMMODITY", "CRYPTOCURRENCY", "TEFAS_FUND", "ETF", "EUROBOND"];
+  const map = new Map<string, Asset[]>();
+  for (const a of assets) {
+    if (!map.has(a.asset_type)) map.set(a.asset_type, []);
+    map.get(a.asset_type)!.push(a);
+  }
+  return order
+    .filter((t) => map.has(t))
+    .map((t) => ({ type: t, label: ASSET_TYPE_LABELS[t] ?? t, items: map.get(t)! }));
+}
+
 interface InvestmentTransactionModalProps {
   mode: "add" | "edit";
   assets: Asset[];
@@ -187,11 +207,10 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                                 className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
                               >
                                 <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                                {h && (
-                                  <span className="text-xs text-white/40 font-mono ml-2 shrink-0">
-                                    {h.quantity.toFixed(2)}
-                                  </span>
-                                )}
+                                <span className="flex items-center gap-2 shrink-0 ml-2">
+                                  {h && <span className="text-xs text-white/40 font-mono">{h.quantity.toFixed(2)}</span>}
+                                  <span className="font-mono text-xs text-white/35">{a.symbol}</span>
+                                </span>
                               </SelectPrimitive.Item>
                             );
                           })}
@@ -199,32 +218,46 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
                         {otherAssets.length > 0 && (
                           <>
                             <SelectPrimitive.Separator className="my-1 h-px bg-white/5" />
-                            <SelectPrimitive.Group>
-                              <SelectPrimitive.Label className="px-3 py-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
-                                Other Assets
-                              </SelectPrimitive.Label>
-                              {otherAssets.map((a) => (
-                                <SelectPrimitive.Item
-                                  key={a.id}
-                                  value={String(a.id)}
-                                  className="flex items-center px-3 py-2 text-sm text-white/30 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/50 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                                >
-                                  <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                                </SelectPrimitive.Item>
-                              ))}
-                            </SelectPrimitive.Group>
+                            {groupByType(otherAssets).map((group) => (
+                              <SelectPrimitive.Group key={group.type}>
+                                <SelectPrimitive.Label className="px-3 py-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+                                  {group.label}
+                                </SelectPrimitive.Label>
+                                {group.items.map((a) => (
+                                  <SelectPrimitive.Item
+                                    key={a.id}
+                                    value={String(a.id)}
+                                    className="flex items-center justify-between px-3 py-2 text-sm text-white/30 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/50 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                                  >
+                                    <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                                    <span className="font-mono text-xs text-white/20 shrink-0 ml-2">{a.symbol}</span>
+                                  </SelectPrimitive.Item>
+                                ))}
+                              </SelectPrimitive.Group>
+                            ))}
                           </>
                         )}
                       </>
                     ) : (
-                      assets.map((a) => (
-                        <SelectPrimitive.Item
-                          key={a.id}
-                          value={String(a.id)}
-                          className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                        >
-                          <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
-                        </SelectPrimitive.Item>
+                      groupByType(assets).map((group, i, arr) => (
+                        <SelectPrimitive.Group key={group.type}>
+                          <SelectPrimitive.Label className="px-3 py-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+                            {group.label}
+                          </SelectPrimitive.Label>
+                          {group.items.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              <span className="font-mono text-xs text-white/35 shrink-0 ml-2">{a.symbol}</span>
+                            </SelectPrimitive.Item>
+                          ))}
+                          {i < arr.length - 1 && (
+                            <SelectPrimitive.Separator className="my-1 h-px bg-white/5" />
+                          )}
+                        </SelectPrimitive.Group>
                       ))
                     )}
                   </SelectPrimitive.Viewport>

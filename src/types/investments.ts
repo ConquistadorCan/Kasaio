@@ -8,6 +8,11 @@ export interface Asset {
   name: string;
   asset_type: AssetType;
   currency: Currency;
+  maturity_date?: string | null;
+  coupon_rate?: number | null;
+  coupon_frequency?: number | null;
+  first_coupon_date?: string | null;
+  face_value?: number | null;
 }
 
 export interface Holding {
