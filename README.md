@@ -1,12 +1,23 @@
 # kasaio
 
-A desktop application for tracking income and expenses.
+A desktop application for tracking personal finances and investments.
 
 ## Features
 
+**Transactions**
 - Create and manage transactions with amount, date, description, and type (income/expense)
 - Create custom categories and assign them to transactions
 - Summary view of your financial activity
+
+**Investments**
+- Track commodities, cryptocurrencies, TEFAS funds, ETFs, and Eurobonds in one portfolio
+- Record BUY, SELL, and INCOME (dividend/coupon) transactions per asset
+- Portfolio view with current value, cost basis, realized P&L, and income-adjusted total P&L
+- Closed positions shown separately with realized P&L and percentage
+- Eurobond details: face value, coupon rate, frequency, maturity date
+- Coupon calendar with year and month views — shows estimated income per month and lets you record coupon payments in one click
+- Exchange rate management for USD/TRY conversion
+- Dashboard section with portfolio stats and active holdings table
 
 ## Download
 
@@ -72,9 +83,17 @@ kasaio/
 │   ├── alembic/          # Database migration scripts
 │   ├── models/           # SQLAlchemy ORM models
 │   ├── schemas/          # Pydantic request/response schemas
-│   ├── routers/          # FastAPI route definitions (categories, transactions)
+│   ├── routers/          # FastAPI route definitions
+│   │   ├── transaction_router.py
+│   │   ├── category_router.py
+│   │   ├── asset_router.py
+│   │   ├── holding_router.py
+│   │   ├── investment_transaction_router.py
+│   │   ├── asset_price_router.py
+│   │   ├── exchange_rate_router.py
+│   │   └── portfolio_router.py
 │   ├── services/         # Business logic layer consumed by routers
-│   └── enums/            # Shared enumerations (e.g. transaction type)
+│   └── enums/            # Shared enumerations (e.g. transaction type, asset type)
 ├── src-tauri/            # Tauri Rust shell and bundler configuration
 ├── index.html            # Vite entry point
 ├── vite.config.ts
