@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Kasaio API",
-    version="2.0.1",
+    version="2.0.2",
     lifespan=lifespan,
 )
 

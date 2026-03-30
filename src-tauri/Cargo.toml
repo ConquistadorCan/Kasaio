@@ -1,6 +1,6 @@
 [package]
 name = "kasaio"
-version = "2.0.1"
+version = "2.0.2"
 description = "A modern desktop app for tracking household income, expenses, and investments."
 authors = ["Mustafa Fatih Can"]
 edition = "2021"
