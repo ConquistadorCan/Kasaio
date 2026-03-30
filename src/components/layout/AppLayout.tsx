@@ -24,12 +24,26 @@ export function AppLayout() {
             {error}
           </p>
         </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70 border border-white/5 transition-colors"
-        >
-          Retry
-        </button>
+        {update ? (
+          <div className="flex flex-col items-center gap-2 px-5 py-4 rounded-xl bg-violet-500/10 border border-violet-500/20 text-center">
+            <p className="text-sm font-medium text-violet-300">Update available — v{update.version}</p>
+            <p className="text-xs text-white/30">Installing the update may fix this issue.</p>
+            <button
+              onClick={install}
+              disabled={installing}
+              className="mt-1 px-4 py-2 rounded-lg text-xs font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
+            >
+              {installing ? "Installing..." : "Install & Restart"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70 border border-white/5 transition-colors"
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }
