@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { portfolioApi } from "../../api/portfolioApi";
 import { useInvestmentStore } from "../../store/useInvestmentStore";
 import { formatCurrency } from "../../lib/formatters";

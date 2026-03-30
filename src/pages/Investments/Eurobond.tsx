@@ -674,7 +674,7 @@ export function Eurobond() {
             <p className="text-sm text-white/20">No Eurobonds held</p>
           </div>
         ) : (
-          rows.map(({ asset, holding, sym, currentValue, pnl, pnlPct, nextCoupon, overdueCount }) => {
+          rows.map(({ asset, holding, sym, pnl, pnlPct, nextCoupon, overdueCount }) => {
             const maturity = asset.maturity_date ? new Date(asset.maturity_date + "T12:00:00") : null;
             const daysToMaturity = maturity ? daysUntil(maturity) : null;
             const couponRate = asset.coupon_rate ? `${(Number(asset.coupon_rate) * 100).toFixed(2)}%` : "—";
