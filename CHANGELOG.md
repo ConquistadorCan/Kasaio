@@ -2,6 +2,14 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [2.0.2] - 2026-03-30
+
+### Fixed
+
+- App failing to start on fresh install due to startup timeout being too short for migrations to complete (increased from 10s to 60s)
+- Updater plugin not registered in Tauri, preventing update notifications from working
+- Frontend log entries now include timestamps
+
 ## [2.0.1] - 2026-03-30
 
 ### Fixed

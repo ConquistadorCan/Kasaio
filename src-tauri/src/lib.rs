@@ -51,7 +51,7 @@ fn frontend_ready(app: tauri::AppHandle) {
 async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
     use tauri::Emitter;
     let health_url = format!("http://127.0.0.1:{}/health", port);
-    let max_attempts = 20;
+    let max_attempts = 120; // 60 seconds — allows time for migrations on fresh install
 
     for attempt in 1..=max_attempts {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
@@ -90,6 +90,7 @@ async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .manage(ApiPort(Mutex::new(0)))
