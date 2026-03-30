@@ -2,6 +2,12 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [2.0.1] - 2026-03-30
+
+### Fixed
+
+- Alembic migrations not running in packaged executable (missing files in bundle)
+
 ## [2.0.0] - 2026-03-30
 
 ### Added

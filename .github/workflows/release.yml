@@ -68,6 +68,19 @@ jobs:
           mkdir ..\src-tauri\binaries
           copy dist\python-sidecar.exe ..\src-tauri\binaries\python-sidecar-x86_64-pc-windows-msvc.exe
 
+      - name: Extract changelog
+        id: changelog
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $content = Get-Content CHANGELOG.md -Raw
+          $pattern = "(?s)## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=\n## \[|\z)"
+          $match = [regex]::Match($content, $pattern)
+          $body = $match.Groups[1].Value.Trim()
+          "body<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -77,6 +90,6 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
-          releaseBody: ""
+          releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: false
           prerelease: false

@@ -5,7 +5,10 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ('alembic.ini', '.'),
+        ('alembic', 'alembic'),
+    ],
     hiddenimports=['aiosqlite'],
     hookspath=[],
     hooksconfig={},

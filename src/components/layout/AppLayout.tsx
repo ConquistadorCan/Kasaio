@@ -63,21 +63,40 @@ export function AppLayout() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[#141422] border border-white/10 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <h2 className="text-base font-semibold text-white">
-                Update available
-              </h2>
+              <h2 className="text-base font-semibold text-white">Update available</h2>
               <p className="text-sm text-white/40">
-                Version <span className="text-white/70">{update.version}</span>{" "}
-                is ready to install.
+                Version <span className="text-white/70 font-mono">{update.version}</span> is ready to install.
               </p>
-              {update.body && (
-                <div className="text-xs text-white/30 mt-1 leading-relaxed flex flex-col gap-0.5">
-                  {update.body.split("\n").map((line, i) => (
-                    <span key={i}>{line}</span>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {update.body && (
+              <div className="max-h-48 overflow-y-auto flex flex-col gap-2 border-t border-white/5 pt-4">
+                {update.body.split("\n").reduce<{ sections: { heading: string; items: string[] }[]; current: { heading: string; items: string[] } | null }>((acc, raw) => {
+                  const line = raw.trim();
+                  if (!line) return acc;
+                  if (line.startsWith("### ")) {
+                    const section = { heading: line.replace(/^###\s*/, ""), items: [] };
+                    acc.sections.push(section);
+                    acc.current = section;
+                  } else if (line.startsWith("- ") && acc.current) {
+                    acc.current.items.push(line.slice(2));
+                  }
+                  return acc;
+                }, { sections: [], current: null }).sections.map((section, si) => (
+                  <div key={si}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-white/25 mb-1.5">{section.heading}</p>
+                    <ul className="flex flex-col gap-1">
+                      {section.items.map((item, ii) => (
+                        <li key={ii} className="flex items-start gap-2 text-xs text-white/50 leading-relaxed">
+                          <span className="text-violet-400 mt-0.5 shrink-0">·</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="flex gap-2">
               <button

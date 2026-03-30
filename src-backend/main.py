@@ -100,7 +100,9 @@ if __name__ == "__main__":
 
     from alembic.config import Config
     from alembic import command as alembic_command
-    alembic_cfg = Config(str(Path(__file__).parent / "alembic.ini"))
+    base_dir = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+    alembic_cfg = Config(str(base_dir / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(base_dir / "alembic"))
     alembic_command.upgrade(alembic_cfg, "head")
 
     port = find_free_port()
