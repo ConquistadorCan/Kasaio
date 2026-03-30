@@ -52,7 +52,6 @@ async def _get_latest_price(db: AsyncSession, asset_id: int) -> float | None:
 async def get_holdings(db: AsyncSession) -> list[HoldingResponse]:
     result = await db.execute(select(Holding))
     holdings = result.scalars().all()
-    logger.info(f"Fetched {len(holdings)} holdings")
     responses = []
     for holding in holdings:
         latest_price = await _get_latest_price(db, holding.asset_id)
@@ -64,7 +63,7 @@ async def get_holding(db: AsyncSession, asset_id: int) -> HoldingResponse | None
     result = await db.execute(select(Holding).where(Holding.asset_id == asset_id))
     holding = result.scalar_one_or_none()
     if not holding:
-        logger.info(f"Holding not found: asset_id={asset_id}")
+        logger.warning(f"Holding not found: asset_id={asset_id}")
         return None
     latest_price = await _get_latest_price(db, asset_id)
     return _calculate_holding_response(holding, latest_price)

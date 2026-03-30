@@ -65,6 +65,4 @@ async def get_portfolio_summary(db: AsyncSession) -> PortfolioSummaryResponse:
         latest_price = await _get_latest_price(db, holding.asset_id)
         holding_responses.append(_build_holding_response(holding, asset, latest_price))
 
-    logger.info(f"Portfolio summary built: {len(holding_responses)} holdings")
-
     return PortfolioSummaryResponse(holdings=holding_responses)

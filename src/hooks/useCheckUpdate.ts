@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
-import { logError } from "../lib/logger";
+import { logError, logInfo } from "../lib/logger";
 
 export function useCheckUpdate() {
   const [update, setUpdate] = useState<Update | null>(null);
@@ -12,7 +12,10 @@ export function useCheckUpdate() {
     async function checkForUpdate() {
       try {
         const result = await check();
-        if (result) setUpdate(result);
+        if (result) {
+          logInfo(`Update available: v${result.version}`);
+          setUpdate(result);
+        }
       } catch (err) {
         await logError("Update check failed", err);
       }
@@ -33,6 +36,7 @@ export function useCheckUpdate() {
   }
 
   function dismiss() {
+    logInfo(`Update v${update?.version} dismissed`);
     setUpdate(null);
   }
 

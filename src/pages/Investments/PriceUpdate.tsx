@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState } from "react";
 import { useInvestmentStore } from "../../store/useInvestmentStore";
 import { assetPricesApi } from "../../api/assetPrices";
 import { logError } from "../../lib/logger";
+import { ApiError } from "../../lib/api";
 import { formatCurrency, formatDate } from "../../lib/formatters";
 import { cn } from "../../lib/utils";
 import type { Asset } from "../../types/investments";
@@ -116,8 +117,10 @@ export function PriceUpdate() {
           try {
             const latest = await assetPricesApi.latest(a.id);
             setLatestPrice(a.id, latest);
-          } catch {
-            // no price yet for this asset
+          } catch (err) {
+            if (!(err instanceof ApiError && err.status === 404)) {
+              logError(`Failed to load price for asset ${a.id}`, err);
+            }
           }
         })
       );

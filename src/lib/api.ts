@@ -1,5 +1,12 @@
 import { useAppStore } from "../store/useAppStore";
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, statusText: string) {
+    super(`API error: ${status} ${statusText}`);
+    this.name = "ApiError";
+  }
+}
+
 export function getBaseUrl(): string {
   const port = useAppStore.getState().apiPort;
   if (!port) throw new Error("API port is not initialized");
@@ -13,7 +20,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+    throw new ApiError(response.status, response.statusText);
   }
 
   if (response.status === 204) {

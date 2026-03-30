@@ -1,6 +1,6 @@
-# kasaio
+# Kasaio
 
-A desktop application for tracking personal finances and investments.
+A Windows desktop application for tracking personal finances and investments.
 
 ## Features
 
@@ -19,9 +19,14 @@ A desktop application for tracking personal finances and investments.
 - Exchange rate management for USD/TRY conversion
 - Dashboard section with portfolio stats and active holdings table
 
+**Other**
+- Automatic update notifications with in-app install
+
 ## Download
 
 Download the latest `.msi` installer from [GitHub Releases](https://github.com/ConquistadorCan/Kasaio/releases/latest).
+
+> **Platform:** Windows only.
 
 ## Development
 
@@ -31,13 +36,15 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
 
 - **Frontend** — React + TypeScript + Vite, served inside the Tauri webview
 - **Backend** — FastAPI (Python) running as a Tauri [sidecar](https://tauri.app/develop/sidecar/) process. It listens on a random free port and exposes a REST API consumed by the frontend.
-- **Desktop shell** — Tauri (Rust) handles the native window, system tray, and bundles both the frontend and the Python sidecar into a single distributable.
+- **Desktop shell** — Tauri (Rust) handles the native window, auto-updates, and bundles both the frontend and the Python sidecar into a single distributable.
+
+**Log file location (production):** `%APPDATA%\com.canmu.kasaio\logs\kasaio.log`
 
 ### Prerequisites
 
 - [Rust](https://rustup.rs) — required by Tauri to compile the native shell
 - [Node.js](https://nodejs.org) (LTS) — for the frontend build toolchain and the `npm` scripts
-- [Python](https://python.org) 3.11+ — for the FastAPI backend
+- [Python](https://python.org) 3.11 — for the FastAPI backend
 
 ### Setup
 
@@ -90,7 +97,6 @@ kasaio/
 │   │   ├── holding_router.py
 │   │   ├── investment_transaction_router.py
 │   │   ├── asset_price_router.py
-│   │   ├── exchange_rate_router.py
 │   │   └── portfolio_router.py
 │   ├── services/         # Business logic layer consumed by routers
 │   └── enums/            # Shared enumerations (e.g. transaction type, asset type)
@@ -104,13 +110,13 @@ kasaio/
 
 The canonical build path is CI — every release is built and published automatically by GitHub Actions when a version tag is pushed. See [Cutting a Release](#cutting-a-release).
 
-For local testing, a convenience script is available. It packages the Python backend with PyInstaller, copies the binary into `src-tauri/binaries/`, and runs `tauri build`:
+For local testing, use the full build script. It packages the Python backend with PyInstaller, copies the binary into `src-tauri/binaries/`, and runs `tauri build`:
 
 ```bash
 npm run build:all
 ```
 
-> **Note:** `build:all` is Windows-only and intended for local verification. Do not use it to produce release artifacts — use `npm run release` instead.
+> **Important:** Always use `npm run build:all` for local builds — not `npm run tauri build` alone. `tauri build` skips the PyInstaller step and will use whatever sidecar binary is already in `src-tauri/binaries/`, which may be stale.
 
 The `.msi` installer will be available at `src-tauri/target/release/bundle/msi/`.
 
@@ -118,31 +124,40 @@ The `.msi` installer will be available at `src-tauri/target/release/bundle/msi/`
 
 Kasaio follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`
 
-- `PATCH` — bug fixes (e.g. `0.1.1`)
-- `MINOR` — new features, backwards compatible (e.g. `0.2.0`)
-- `MAJOR` — breaking changes or major milestones (e.g. `1.0.0`)
+- `PATCH` — bug fixes (e.g. `2.0.1`)
+- `MINOR` — new features, backwards compatible (e.g. `2.1.0`)
+- `MAJOR` — breaking changes or major milestones (e.g. `3.0.0`)
 
-The version is defined in two places and must always be in sync:
+The version is kept in sync across four files automatically by the release script:
 
-- `tauri.conf.json` → `version`
 - `package.json` → `version`
+- `src-tauri/tauri.conf.json` → `version`
+- `src-tauri/Cargo.toml` → `version`
+- `src-backend/main.py` → FastAPI `version`
 
 ### Cutting a Release
 
-Use the release script, which updates both version files, commits, tags, and pushes in one step:
+Must be on the `main` branch. Use the release script, which updates all version files, commits, tags, and pushes in one step:
 
 ```bash
-npm run release -- 0.2.0
+npm run release -- 2.1.0
 ```
 
 This will:
 
-1. Update the version in `tauri.conf.json` and `package.json`
-2. Commit the version bump
-3. Create a `v0.2.0` git tag
-4. Push the commit and the tag to GitHub
+1. Verify `CHANGELOG.md` contains an entry for the new version
+2. Update the version in all four files listed above
+3. Commit the version bump
+4. Create a `v2.1.0` git tag
+5. Push the commit and the tag to GitHub
 
 GitHub Actions picks up the tag, builds the `.msi`, and publishes it to GitHub Releases automatically.
+
+If a release fails partway through (e.g. CI error) and the version files are already bumped, re-trigger without re-bumping:
+
+```bash
+npm run release -- 2.1.0 --retry
+```
 
 ### Branch Strategy
 

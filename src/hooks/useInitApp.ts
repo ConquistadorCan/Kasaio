@@ -9,7 +9,8 @@ import { assetsApi } from "../api/assets";
 import { holdingsApi } from "../api/holdings";
 import { investmentTransactionsApi } from "../api/investmentTransactions";
 import { assetPricesApi } from "../api/assetPrices";
-import { logError } from "../lib/logger";
+import { logError, logInfo } from "../lib/logger";
+import { ApiError } from "../lib/api";
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_MAX_RETRIES = 3;
@@ -55,12 +56,15 @@ export function useInitApp() {
         try {
           const latest = await assetPricesApi.latest(a.id);
           setLatestPrice(a.id, latest);
-        } catch {
-          // asset has no price yet, not an error worth logging
+        } catch (err) {
+          if (!(err instanceof ApiError && err.status === 404)) {
+            logError(`Failed to load price for asset ${a.id}`, err);
+          }
         }
       })
     );
 
+    logInfo("App initialized successfully");
     setReady(true);
   }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice, setInvestmentTransactions]);
 
@@ -100,9 +104,12 @@ export function useInitApp() {
         loaded = true;
         unlisten?.();
         unlistenFailed?.();
-        await loadData(port);
+        await loadData(port).catch(handleError);
       } catch (err) {
-        if (!loaded) await handleError(err);
+        if (!loaded) {
+          loaded = true;
+          await handleError(err);
+        }
       }
     }
 

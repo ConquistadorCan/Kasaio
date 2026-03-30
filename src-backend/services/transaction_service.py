@@ -23,7 +23,7 @@ async def update_transaction(
 ) -> Transaction | None:
     transaction = await db.get(Transaction, transaction_id)
     if not transaction:
-        logger.info(f"Transaction not found for update: id={transaction_id}")
+        logger.warning(f"Transaction not found for update: id={transaction_id}")
         return None
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(transaction, key, value)
@@ -35,22 +35,20 @@ async def update_transaction(
 
 async def get_transactions(db: AsyncSession) -> list[Transaction]:
     result = await db.execute(select(Transaction))
-    transactions = result.scalars().all()
-    logger.info(f"Fetched {len(transactions)} transactions")
-    return transactions
+    return result.scalars().all()
 
 
 async def get_transaction(db: AsyncSession, transaction_id: int) -> Transaction | None:
     transaction = await db.get(Transaction, transaction_id)
     if not transaction:
-        logger.info(f"Transaction not found: id={transaction_id}")
+        logger.warning(f"Transaction not found: id={transaction_id}")
     return transaction
 
 
 async def delete_transaction(db: AsyncSession, transaction_id: int) -> bool:
     transaction = await db.get(Transaction, transaction_id)
     if not transaction:
-        logger.info(f"Transaction not found for delete: id={transaction_id}")
+        logger.warning(f"Transaction not found for delete: id={transaction_id}")
         return False
     await db.delete(transaction)
     await db.commit()

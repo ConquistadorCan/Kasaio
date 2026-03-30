@@ -9,7 +9,11 @@ a = Analysis(
         ('alembic.ini', '.'),
         ('alembic', 'alembic'),
     ],
-    hiddenimports=['aiosqlite'],
+    hiddenimports=[
+        'aiosqlite',
+        'greenlet',
+        'sqlalchemy.dialects.sqlite',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

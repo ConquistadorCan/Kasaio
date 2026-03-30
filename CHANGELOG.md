@@ -2,13 +2,29 @@
 
 All notable changes to Kasaio will be documented in this file.
 
-## [2.0.2] - 2026-03-30
+## [2.0.2] - 2026-03-31
 
 ### Fixed
 
-- App failing to start on fresh install due to startup timeout being too short for migrations to complete (increased from 10s to 60s)
+- Alembic migrations running on wrong database (`./kasaio.db`) instead of the app data directory — investment tables were never created in the real database
+- App stuck on loading screen forever due to `backend-ready` event name mismatch (frontend was listening for `backend_ready`)
+- App stuck on loading screen silently when data loading failed on retry (error was swallowed due to `loaded` flag set too early)
+- App stuck on loading screen with no error when backend crashes before startup (now shows error and writes to log)
+- Missing `greenlet` and SQLite dialect imports in packaged executable
 - Updater plugin not registered in Tauri, preventing update notifications from working
-- Frontend log entries now include timestamps
+- Silent asset price fetch errors at startup now logged (previously swallowed unless it was a 404)
+
+### Improved
+
+- Unified `frontend.log` and `backend.log` into a single `kasaio.log` file
+- All log entries now include timestamps across frontend, backend, and Tauri layers
+- Log rotation: `kasaio.log` automatically rotates to `kasaio.log.bak` when it exceeds 5 MB
+- Tauri startup events (frontend ready, backend ready) now written to `kasaio.log` in release builds
+- Backend HTTP request logging middleware — every API call logged with method, path, status, and duration
+- Backend log levels now correctly use `WARNING` for not-found and validation failures instead of `INFO`
+- `ValueError` business rule violations (e.g. selling more than held) logged before being returned as 400
+- Frontend `ApiError` class carries HTTP status code — enables precise error handling by status
+- Added `logInfo` to frontend logger for non-error lifecycle events (app init, update available/dismissed)
 
 ## [2.0.1] - 2026-03-30
 

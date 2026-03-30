@@ -10,21 +10,20 @@ logger = logging.getLogger("kasaio")
 
 async def get_assets(db: AsyncSession) -> list[Asset]:
     result = await db.execute(select(Asset))
-    assets = result.scalars().all()
-    logger.info(f"Fetched {len(assets)} assets")
-    return assets
+    return result.scalars().all()
 
 
 async def get_asset(db: AsyncSession, asset_id: int) -> Asset | None:
     asset = await db.get(Asset, asset_id)
     if not asset:
-        logger.info(f"Asset not found: id={asset_id}")
+        logger.warning(f"Asset not found: id={asset_id}")
     return asset
 
 
 async def update_eurobond_details(db: AsyncSession, asset_id: int, data: dict) -> Asset | None:
     asset = await db.get(Asset, asset_id)
     if not asset:
+        logger.warning(f"Asset not found for eurobond update: id={asset_id}")
         return None
     for key, value in data.items():
         setattr(asset, key, value)

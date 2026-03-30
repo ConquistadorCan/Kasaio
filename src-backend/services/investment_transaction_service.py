@@ -17,6 +17,7 @@ async def create_investment_transaction(
 ) -> InvestmentTransaction:
     asset = await db.get(Asset, data.asset_id)
     if not asset:
+        logger.warning(f"Asset not found for investment transaction: id={data.asset_id}")
         raise ValueError(f"Asset not found: id={data.asset_id}")
 
     transaction = InvestmentTransaction(**data.model_dump())
@@ -42,6 +43,7 @@ async def _update_holding(db: AsyncSession, data: InvestmentTransactionCreate) -
 
     if holding is None:
         if data.transaction_type == InvestmentTransactionType.SELL:
+            logger.warning(f"Sell attempted with no holding: asset_id={data.asset_id}")
             raise ValueError("Cannot sell an asset with no existing holding")
         holding = Holding(
             asset_id=data.asset_id,
@@ -58,6 +60,7 @@ async def _update_holding(db: AsyncSession, data: InvestmentTransactionCreate) -
             logger.info(f"Holding updated (buy): asset_id={data.asset_id} new_quantity={holding.quantity} new_avg_cost={holding.average_cost}")
         elif data.transaction_type == InvestmentTransactionType.SELL:
             if data.quantity > holding.quantity:
+                logger.warning(f"Sell quantity exceeds holding: asset_id={data.asset_id} requested={data.quantity} available={holding.quantity}")
                 raise ValueError(f"Cannot sell {data.quantity}, only {holding.quantity} available")
             realized = (data.price - float(holding.average_cost)) * data.quantity
             holding.realized_pnl = float(holding.realized_pnl) + realized

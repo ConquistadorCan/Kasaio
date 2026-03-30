@@ -15,6 +15,7 @@ async def create_asset_price(
 ) -> AssetPrice:
     asset = await db.get(Asset, data.asset_id)
     if not asset:
+        logger.warning(f"Asset not found for price recording: id={data.asset_id}")
         raise ValueError(f"Asset not found: id={data.asset_id}")
 
     asset_price = AssetPrice(**data.model_dump())

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from sqlalchemy import select
 
@@ -6,6 +7,8 @@ from database import AsyncSessionLocal
 from enums.asset_type_enum import AssetType
 from enums.currency_enum import Currency
 from models.asset import Asset
+
+logger = logging.getLogger("kasaio")
 
 
 ASSETS = [
@@ -25,11 +28,11 @@ async def seed() -> None:
             existing = await db.execute(select(Asset).where(Asset.symbol == asset.symbol))
             if existing.scalar_one_or_none() is None:
                 db.add(asset)
-                print(f"Added: {asset.name}")
+                logger.info(f"Seed: added asset {asset.symbol} ({asset.name})")
             else:
-                print(f"Skipped (already exists): {asset.name}")
+                logger.info(f"Seed: skipped existing asset {asset.symbol}")
         await db.commit()
-        print("Seed completed.")
+        logger.info("Seed completed")
 
 
 if __name__ == "__main__":

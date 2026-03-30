@@ -23,7 +23,7 @@ async def update_category(
 ) -> Category | None:
     category = await db.get(Category, category_id)
     if not category:
-        logger.info(f"Category not found for update: id={category_id}")
+        logger.warning(f"Category not found for update: id={category_id}")
         return None
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(category, key, value)
@@ -35,9 +35,7 @@ async def update_category(
 
 async def get_categories(db: AsyncSession) -> list[Category]:
     result = await db.execute(select(Category))
-    categories = result.scalars().all()
-    logger.info(f"Fetched {len(categories)} categories")
-    return categories
+    return result.scalars().all()
 
 
 async def get_category(db: AsyncSession, category_id: int) -> Category | None:
@@ -47,7 +45,7 @@ async def get_category(db: AsyncSession, category_id: int) -> Category | None:
 async def delete_category(db: AsyncSession, category_id: int) -> bool:
     category = await db.get(Category, category_id)
     if not category:
-        logger.info(f"Category not found for delete: id={category_id}")
+        logger.warning(f"Category not found for delete: id={category_id}")
         return False
     await db.delete(category)
     await db.commit()

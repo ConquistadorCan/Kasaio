@@ -9,35 +9,73 @@ fn get_api_port(state: State<ApiPort>) -> u16 {
     *state.0.lock().unwrap()
 }
 
+// ── Logging helpers (release only) ──────────────────────────────────────────
+
+/// Opens kasaio.log in append mode, rotating to kasaio.log.bak if it exceeds 5 MB.
+#[cfg(not(debug_assertions))]
+fn open_log(log_dir: &std::path::Path) -> Option<std::fs::File> {
+    let log_file = log_dir.join("kasaio.log");
+    if let Ok(meta) = std::fs::metadata(&log_file) {
+        if meta.len() > 5 * 1024 * 1024 {
+            let _ = std::fs::rename(&log_file, log_dir.join("kasaio.log.bak"));
+        }
+    }
+    let _ = std::fs::create_dir_all(log_dir);
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file)
+        .ok()
+}
+
+/// Write a Tauri-originated entry: `YYYY-MM-DD HH:MM:SS [LEVEL] tauri: message`
+#[cfg(not(debug_assertions))]
+fn write_log(log_dir: &std::path::Path, level: &str, message: &str) {
+    use std::io::Write;
+    let ts = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+    if let Some(mut file) = open_log(log_dir) {
+        let _ = writeln!(file, "{} [{}] tauri: {}", ts, level, message);
+    }
+}
+
+/// Write a pre-formatted line as-is (Python stderr and frontend errors already carry their own format).
+#[cfg(not(debug_assertions))]
+fn write_raw(log_dir: &std::path::Path, text: &str) {
+    use std::io::Write;
+    if let Some(mut file) = open_log(log_dir) {
+        let _ = writeln!(file, "{}", text);
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 #[tauri::command]
 fn log_frontend_error(_app: tauri::AppHandle, message: String) {
     #[cfg(debug_assertions)]
     eprintln!("[kasaio:frontend] {}", message);
 
     #[cfg(not(debug_assertions))]
-    {
-        use std::io::Write;
-        if let Ok(data_dir) = _app.path().app_data_dir() {
-            let log_dir = data_dir.join("logs");
-            let _ = std::fs::create_dir_all(&log_dir);
-            if let Ok(mut file) = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(log_dir.join("frontend.log"))
-            {
-                let _ = writeln!(file, "{}", message);
-            }
-        }
+    if let Ok(data_dir) = _app.path().app_data_dir() {
+        write_raw(&data_dir.join("logs"), &message);
     }
 }
 
-// Called by React when it has set up its event listener and is ready to receive backend-ready
+// Called by React when it has set up its event listener and is ready to receive backend_ready
 #[tauri::command]
 fn frontend_ready(app: tauri::AppHandle) {
     use tauri::Emitter;
     let port = *app.state::<ApiPort>().0.lock().unwrap();
     let backend_ready = *app.state::<BackendReady>().0.lock().unwrap();
     eprintln!("[kasaio] frontend ready, backend_ready={}, port={}", backend_ready, port);
+
+    #[cfg(not(debug_assertions))]
+    if let Ok(data_dir) = app.path().app_data_dir() {
+        write_log(
+            &data_dir.join("logs"),
+            "INFO",
+            &format!("Frontend ready (backend_ready={}, port={})", backend_ready, port),
+        );
+    }
 
     if backend_ready && port != 0 {
         let _ = app.emit("backend_ready", port);
@@ -53,37 +91,36 @@ async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
     let health_url = format!("http://127.0.0.1:{}/health", port);
     let max_attempts = 120; // 60 seconds — allows time for migrations on fresh install
 
+    #[cfg(not(debug_assertions))]
+    let log_dir = handle.path().app_data_dir().ok().map(|d| d.join("logs"));
+
     for attempt in 1..=max_attempts {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Ok(resp) = reqwest::get(&health_url).await {
             if resp.status().is_success() {
                 *handle.state::<ApiPort>().0.lock().unwrap() = port;
                 *handle.state::<BackendReady>().0.lock().unwrap() = true;
-                let _ = handle.emit("backend-ready", port);
+                let _ = handle.emit("backend_ready", port);
                 eprintln!("[kasaio] backend ready on port {}", port);
+                #[cfg(not(debug_assertions))]
+                if let Some(ref ld) = log_dir {
+                    write_log(ld, "INFO", &format!("Backend ready on port {}", port));
+                }
                 return;
             }
         }
         eprintln!("[kasaio] health check attempt {}/{} failed", attempt, max_attempts);
     }
 
-    let msg = format!("Backend failed to start after {} attempts on port {}", max_attempts, port);
+    let msg = format!(
+        "Backend failed to start after {} attempts on port {}",
+        max_attempts, port
+    );
     eprintln!("[kasaio] {}", msg);
-
     #[cfg(not(debug_assertions))]
-    if let Ok(data_dir) = handle.path().app_data_dir() {
-        use std::io::Write;
-        let log_dir = data_dir.join("logs");
-        let _ = std::fs::create_dir_all(&log_dir);
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_dir.join("backend.log"))
-        {
-            let _ = writeln!(file, "[ERROR] {}", msg);
-        }
+    if let Some(ref ld) = log_dir {
+        write_log(ld, "ERROR", &msg);
     }
-
     let _ = handle.emit("backend_failed", msg);
 }
 
@@ -201,7 +238,7 @@ mod dev {
 // Release mode — uses the bundled PyInstaller sidecar
 #[cfg(not(debug_assertions))]
 mod release {
-    use super::wait_for_backend;
+    use super::{wait_for_backend, write_log, write_raw};
     use std::sync::Mutex;
     use tauri::Manager;
     use tauri_plugin_shell::{
@@ -217,21 +254,24 @@ mod release {
         let data_dir = app.path().app_data_dir()?;
         std::fs::create_dir_all(&data_dir)?;
 
-        let (mut rx, child) = app.shell()
+        let (mut rx, child) = app
+            .shell()
             .sidecar("python-sidecar")?
             .env("KASAIO_DATA_DIR", data_dir.to_string_lossy().as_ref())
             .spawn()?;
         *app.state::<Sidecar>().0.lock().unwrap() = Some(child);
 
         let handle = app.handle().clone();
+        let log_dir = data_dir.join("logs");
         tauri::async_runtime::spawn(async move {
+            let mut port_received = false;
             while let Some(event) = rx.recv().await {
                 match event {
                     CommandEvent::Stdout(line) => {
                         let text = String::from_utf8_lossy(&line);
-                        eprintln!("[kasaio:release] {}", text);
                         if let Some(port_str) = text.trim().strip_prefix("KASAIO_API_PORT=") {
                             if let Ok(port) = port_str.trim().parse::<u16>() {
+                                port_received = true;
                                 let handle = handle.clone();
                                 tauri::async_runtime::spawn(async move {
                                     wait_for_backend(port, handle).await;
@@ -240,10 +280,19 @@ mod release {
                         }
                     }
                     CommandEvent::Stderr(line) => {
-                        eprintln!("[kasaio:release] {}", String::from_utf8_lossy(&line));
+                        let text = String::from_utf8_lossy(&line);
+                        write_raw(&log_dir, text.trim());
                     }
                     CommandEvent::Terminated(status) => {
-                        eprintln!("[kasaio:release] terminated: {:?}", status);
+                        if !port_received {
+                            use tauri::Emitter;
+                            let msg = format!(
+                                "Backend process exited unexpectedly (code: {:?}). Check logs for details.",
+                                status.code
+                            );
+                            write_log(&log_dir, "ERROR", &msg);
+                            let _ = handle.emit("backend_failed", msg);
+                        }
                     }
                     _ => {}
                 }
