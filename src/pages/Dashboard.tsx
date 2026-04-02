@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { useAppStore } from "../store/useAppStore";
 import { useInvestmentStore } from "../store/useInvestmentStore";
+import { useBESStore } from "../store/useBESStore";
 import { formatCurrency, formatDateShort } from "../lib/formatters";
 import type { TransactionType } from "../types";
 import { cn } from "../lib/utils";
@@ -95,6 +96,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { transactions, categories } = useAppStore();
   const { assets, holdings, latestPrices, investmentTransactions } = useInvestmentStore();
+  const { plans: besPlans } = useBESStore();
   const [walletView, setWalletView] = useState<WalletView>("TRY");
 
   const sym = walletView === "USD" ? "$" : "₺";
@@ -134,7 +136,7 @@ export function Dashboard() {
   // ── Portfolio ───────────────────────────────────────────────────────────────
   const { portfolioValue, portfolioPnl, portfolioPnlPct } = useMemo(() => {
     const activeHoldings = walletHoldings.filter((h) => h.quantity > 0);
-    const portfolioValue = activeHoldings.reduce((sum, h) => {
+    const holdingsValue = activeHoldings.reduce((sum, h) => {
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
       return sum + price * h.quantity;
     }, 0);
@@ -143,10 +145,21 @@ export function Dashboard() {
     const portfolioIncome = walletInvestmentTxns
       .filter((t) => t.transaction_type === "INCOME")
       .reduce((sum, t) => sum + t.quantity * t.price, 0);
-    const portfolioPnl = (portfolioValue - portfolioCost) + portfolioRealizedPnl + portfolioIncome;
-    const portfolioPnlPct = portfolioCost > 0 ? (portfolioPnl / portfolioCost) * 100 : 0;
+
+    // BES is always TRY — only include when viewing TRY wallet
+    const besValue = walletView === "TRY"
+      ? besPlans.reduce((sum, p) => sum + (p.current_value ?? 0), 0)
+      : 0;
+    const besCost = walletView === "TRY"
+      ? besPlans.reduce((sum, p) => sum + p.total_paid, 0)
+      : 0;
+
+    const portfolioValue = holdingsValue + besValue;
+    const totalCost = portfolioCost + besCost;
+    const portfolioPnl = (holdingsValue - portfolioCost) + portfolioRealizedPnl + portfolioIncome + (besValue - besCost);
+    const portfolioPnlPct = totalCost > 0 ? (portfolioPnl / totalCost) * 100 : 0;
     return { portfolioValue, portfolioPnl, portfolioPnlPct };
-  }, [walletHoldings, walletInvestmentTxns, latestPrices]);
+  }, [walletHoldings, walletInvestmentTxns, latestPrices, besPlans, walletView]);
 
   const walletTotal = netBalance + portfolioValue;
 
@@ -176,12 +189,26 @@ export function Dashboard() {
 
   // ── Asset allocation ────────────────────────────────────────────────────────
   const assetAllocation = useMemo(() => {
-    return walletHoldings.map((h) => {
+    const holdingRows = walletHoldings.map((h) => {
       const asset = walletAssets.find((a) => a.id === h.asset_id);
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
       return { name: asset?.name ?? "Unknown", value: price * h.quantity };
     }).filter((a) => a.value > 0);
-  }, [walletHoldings, walletAssets, latestPrices]);
+
+    const besRows = walletView === "TRY"
+      ? besPlans
+          .filter((p) => (p.current_value ?? 0) > 0)
+          .map((p) => ({ name: p.name, value: p.current_value! }))
+      : [];
+
+    return [...holdingRows, ...besRows];
+  }, [walletHoldings, walletAssets, latestPrices, besPlans, walletView]);
+
+  // ── BES rows (TRY only) ─────────────────────────────────────────────────────
+  const besRows = useMemo(() => {
+    if (walletView !== "TRY") return [];
+    return besPlans.filter((p) => p.current_value !== null || p.total_paid > 0);
+  }, [besPlans, walletView]);
 
   // ── Holdings rows ───────────────────────────────────────────────────────────
   const holdingRows = useMemo(() => {
@@ -407,35 +434,63 @@ export function Dashboard() {
                 <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
               ))}
             </div>
-            {holdingRows.length === 0 ? (
+            {holdingRows.length === 0 && besRows.length === 0 ? (
               <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No positions yet</p></div>
             ) : (
-              holdingRows.map(({ asset, holding, currentValue, pnl, pnlPct }) => (
-                <div key={holding.id} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
-                  <div>
-                    <p className="text-sm text-white">{asset?.name ?? "—"}</p>
-                    <p className="text-xs text-white/30">{asset?.symbol ?? "—"}</p>
+              <>
+                {holdingRows.map(({ asset, holding, currentValue, pnl, pnlPct }) => (
+                  <div key={holding.id} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
+                    <div>
+                      <p className="text-sm text-white">{asset?.name ?? "—"}</p>
+                      <p className="text-xs text-white/30">{asset?.symbol ?? "—"}</p>
+                    </div>
+                    <span className="text-sm text-white/60 font-mono">{holding.quantity.toFixed(2)}</span>
+                    <span className="text-sm text-white font-mono">
+                      {currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}
+                    </span>
+                    <div>
+                      {pnl !== null ? (
+                        <>
+                          <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                            {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
+                          </p>
+                          <p className={cn("text-xs font-mono", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                            {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-sm text-white/20">—</span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm text-white/60 font-mono">{holding.quantity.toFixed(2)}</span>
-                  <span className="text-sm text-white font-mono">
-                    {currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}
-                  </span>
-                  <div>
-                    {pnl !== null ? (
-                      <>
-                        <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                          {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
-                        </p>
-                        <p className={cn("text-xs font-mono", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
-                          {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
-                        </p>
-                      </>
-                    ) : (
-                      <span className="text-sm text-white/20">—</span>
-                    )}
+                ))}
+                {besRows.map((plan) => (
+                  <div key={`bes-${plan.id}`} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
+                    <div>
+                      <p className="text-sm text-white">{plan.name}</p>
+                      <p className="text-xs text-white/30">BES · {plan.company}</p>
+                    </div>
+                    <span className="text-sm text-white/30 font-mono">—</span>
+                    <span className="text-sm text-white font-mono">
+                      {plan.current_value !== null ? `₺${formatCurrency(plan.current_value)}` : "—"}
+                    </span>
+                    <div>
+                      {plan.pnl !== null ? (
+                        <>
+                          <p className={cn("text-sm font-mono font-medium", plan.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                            {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
+                          </p>
+                          <p className={cn("text-xs font-mono", plan.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                            {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-sm text-white/20">—</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </div>

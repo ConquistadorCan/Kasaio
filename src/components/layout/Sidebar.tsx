@@ -19,6 +19,7 @@ import {
   RefreshCw,
   LineChart,
   Landmark,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -73,6 +74,7 @@ const NAV_ITEMS: TopLevelNav[] = [
       { label: "TEFAS Funds", path: "/investments/tefas-funds", icon: TrendingUp },
       { label: "ETFs", path: "/investments/etf", icon: LineChart },
       { label: "Eurobonds", path: "/investments/eurobond", icon: Landmark },
+      { label: "BES", path: "/investments/bes", icon: ShieldCheck },
       { label: "Transactions", path: "/investments/transactions", icon: Receipt },
       { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
     ],

@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { portfolioApi } from "../../api/portfolioApi";
 import { useInvestmentStore } from "../../store/useInvestmentStore";
-import { formatCurrency } from "../../lib/formatters";
+import { useBESStore } from "../../store/useBESStore";
+import { formatCurrency, formatDate } from "../../lib/formatters";
 import { logError } from "../../lib/logger";
 import { LoadingState, ErrorState } from "../../components/ui/ErrorComponents";
 import { cn } from "../../lib/utils";
@@ -24,6 +25,7 @@ function currencySymbol(currency: string) {
 export function InvestmentsPortfolio() {
   const navigate = useNavigate();
   const { investmentTransactions } = useInvestmentStore();
+  const { plans: besPlans } = useBESStore();
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -185,6 +187,61 @@ export function InvestmentsPortfolio() {
               </div>
             );
           })()}
+
+          {/* BES Plans */}
+          {besPlans.length > 0 && (
+            <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">BES Plans</span>
+                <button
+                  onClick={() => navigate("/investments/bes")}
+                  className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors"
+                >
+                  Manage <ArrowRight size={12} />
+                </button>
+              </div>
+              <div className="grid grid-cols-[1fr_130px_130px_130px] px-5 py-3 border-b border-white/5">
+                {["Plan", "Total Paid", "Current Value", "P&L"].map((col) => (
+                  <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
+                ))}
+              </div>
+              {besPlans.map((plan) => (
+                <div key={plan.id} className="grid grid-cols-[1fr_130px_130px_130px] px-5 py-4 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
+                  <div>
+                    <p className="text-sm font-medium text-white">{plan.name}</p>
+                    <p className="text-xs text-white/30 mt-0.5">{plan.company}</p>
+                  </div>
+                  <span className="text-sm text-white/70 font-mono">₺{formatCurrency(plan.total_paid)}</span>
+                  <div>
+                    {plan.current_value !== null ? (
+                      <>
+                        <span className="text-sm text-white font-mono">₺{formatCurrency(plan.current_value)}</span>
+                        {plan.last_updated && (
+                          <p className="text-xs text-white/20 mt-0.5">{formatDate(plan.last_updated)}</p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm text-white/20">—</span>
+                    )}
+                  </div>
+                  <div>
+                    {plan.pnl !== null ? (
+                      <>
+                        <p className={cn("text-sm font-mono font-medium", plan.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                          {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
+                        </p>
+                        <p className={cn("text-xs font-mono mt-0.5", plan.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                          {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-sm text-white/20">—</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Quick links */}
           <div className="grid grid-cols-2 gap-3">

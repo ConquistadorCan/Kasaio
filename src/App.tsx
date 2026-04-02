@@ -12,6 +12,7 @@ import { InvestmentTransactions } from "./pages/Investments/Transactions";
 import { PriceUpdate } from "./pages/Investments/PriceUpdate";
 import { ETF } from "./pages/Investments/ETF";
 import { Eurobond } from "./pages/Investments/Eurobond";
+import { BES } from "./pages/Investments/BES";
 
 export function App() {
   return (
@@ -41,6 +42,7 @@ export function App() {
           <Route path="investments/eurobond" element={<Eurobond />} />
           <Route path="investments/transactions" element={<InvestmentTransactions />} />
           <Route path="investments/price-update" element={<PriceUpdate />} />
+          <Route path="investments/bes" element={<BES />} />
         </Route>
       </Routes>
     </>

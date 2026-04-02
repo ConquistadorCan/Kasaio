@@ -3,12 +3,14 @@ import { listen, emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../store/useAppStore";
 import { useInvestmentStore } from "../store/useInvestmentStore";
+import { useBESStore } from "../store/useBESStore";
 import { transactionsApi } from "../api/transactions";
 import { categoriesApi } from "../api/categories";
 import { assetsApi } from "../api/assets";
 import { holdingsApi } from "../api/holdings";
 import { investmentTransactionsApi } from "../api/investmentTransactions";
 import { assetPricesApi } from "../api/assetPrices";
+import { besApi } from "../api/bes";
 import { logError, logInfo } from "../lib/logger";
 import { ApiError } from "../lib/api";
 
@@ -32,24 +34,27 @@ async function waitForPort(): Promise<number> {
 export function useInitApp() {
   const { setApiPort, setTransactions, setCategories } = useAppStore();
   const { setAssets, setHoldings, setLatestPrice, setInvestmentTransactions } = useInvestmentStore();
+  const { setPlans: setBESPlans } = useBESStore();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async (port: number) => {
     setApiPort(port);
 
-    const [txns, cats, assets, holdings, investmentTxns] = await Promise.all([
+    const [txns, cats, assets, holdings, investmentTxns, besPlans] = await Promise.all([
       transactionsApi.list(),
       categoriesApi.list(),
       assetsApi.list(),
       holdingsApi.list(),
       investmentTransactionsApi.list(),
+      besApi.listPlans(),
     ]);
     setTransactions(txns);
     setCategories(cats);
     setAssets(assets);
     setHoldings(holdings);
     setInvestmentTransactions(investmentTxns);
+    setBESPlans(besPlans);
 
     await Promise.all(
       assets.map(async (a) => {
@@ -66,7 +71,7 @@ export function useInitApp() {
 
     logInfo("App initialized successfully");
     setReady(true);
-  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice, setInvestmentTransactions]);
+  }, [setApiPort, setTransactions, setCategories, setAssets, setHoldings, setLatestPrice, setInvestmentTransactions, setBESPlans]);
 
   const handleError = useCallback(async (err: unknown) => {
     await logError("Failed to initialize app", err);

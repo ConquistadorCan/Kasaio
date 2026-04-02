@@ -90,6 +90,7 @@ from routers.investment_transaction_router import router as investment_transacti
 from routers.asset_price_router import router as asset_price_router
 from routers.asset_router import router as asset_router
 from routers.portfolio_router import router as portfolio_router
+from routers.bes_router import router as bes_router
 
 app.include_router(category_router)
 app.include_router(transaction_router)
@@ -98,6 +99,7 @@ app.include_router(investment_transaction_router)
 app.include_router(asset_price_router)
 app.include_router(asset_router)
 app.include_router(portfolio_router)
+app.include_router(bes_router)
 
 
 @app.get("/health") # DO NOT CHANGE THIS ENDPOINT, IT IS USED FOR HEALTH CHECKS
