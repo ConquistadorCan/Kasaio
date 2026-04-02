@@ -20,6 +20,20 @@ class InvestmentTransactionCreate(BaseModel):
         return v
 
 
+class InvestmentTransactionUpdate(BaseModel):
+    transaction_type: InvestmentTransactionType | None = None
+    quantity: float | None = None
+    price: float | None = None
+    date: datetime | None = None
+
+    @field_validator("quantity", "price")
+    @classmethod
+    def must_be_positive(cls, v: float | None) -> float | None:
+        if v is not None and v <= 0:
+            raise ValueError("must be greater than 0")
+        return v
+
+
 class InvestmentTransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

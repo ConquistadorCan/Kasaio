@@ -9,9 +9,19 @@ interface InvestmentTransactionCreate {
   date: string;
 }
 
+interface InvestmentTransactionUpdate {
+  transaction_type?: "BUY" | "SELL" | "INCOME";
+  quantity?: number;
+  price?: number;
+  date?: string;
+}
+
 export const investmentTransactionsApi = {
   list: () => api.get<InvestmentTransaction[]>("/investment-transactions/"),
   get: (id: number) => api.get<InvestmentTransaction>(`/investment-transactions/${id}`),
   create: (payload: InvestmentTransactionCreate) =>
     api.post<InvestmentTransaction>("/investment-transactions/", payload),
+  update: (id: number, payload: InvestmentTransactionUpdate) =>
+    api.patch<InvestmentTransaction>(`/investment-transactions/${id}`, payload),
+  delete: (id: number) => api.delete(`/investment-transactions/${id}`),
 };

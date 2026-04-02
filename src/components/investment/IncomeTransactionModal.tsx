@@ -23,6 +23,7 @@ const EMPTY_FORM: FormData = {
 };
 
 interface IncomeTransactionModalProps {
+  mode?: "add" | "edit";
   onSubmit: (data: {
     asset_id: number;
     transaction_type: "INCOME";
@@ -35,15 +36,17 @@ interface IncomeTransactionModalProps {
   prefillAssetId?: number;
   prefillQuantity?: number;
   prefillPricePerUnit?: number;
+  prefillDate?: string;
 }
 
-export function IncomeTransactionModal({ onSubmit, onClose, loading, prefillAssetId, prefillQuantity, prefillPricePerUnit }: IncomeTransactionModalProps) {
+export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loading, prefillAssetId, prefillQuantity, prefillPricePerUnit, prefillDate }: IncomeTransactionModalProps) {
   const { assets, holdings } = useInvestmentStore();
   const [form, setForm] = useState<FormData>({
     ...EMPTY_FORM,
     asset_id: prefillAssetId != null ? String(prefillAssetId) : "",
     quantity: prefillQuantity != null ? String(prefillQuantity) : "",
     price: prefillPricePerUnit != null ? String(prefillPricePerUnit) : "",
+    date: prefillDate != null ? prefillDate.split("T")[0] : EMPTY_FORM.date,
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
@@ -106,14 +109,14 @@ export function IncomeTransactionModal({ onSubmit, onClose, loading, prefillAsse
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-base font-semibold text-white mb-1">Record Income</h2>
+        <h2 className="text-base font-semibold text-white mb-1">{mode === "edit" ? "Edit Income" : "Record Income"}</h2>
         <p className="text-xs text-white/30 mb-5">Dividend, coupon, or other investment income</p>
 
         <div className="flex flex-col gap-4">
           {/* Asset */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Asset</label>
-            <SelectPrimitive.Root value={form.asset_id} onValueChange={handleAssetChange}>
+            <SelectPrimitive.Root value={form.asset_id} onValueChange={handleAssetChange} disabled={mode === "edit"}>
               <SelectPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors data-[placeholder]:text-white/20",

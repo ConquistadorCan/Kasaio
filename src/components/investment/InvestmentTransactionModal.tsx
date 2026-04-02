@@ -52,6 +52,13 @@ function groupByType(assets: Asset[]): { type: string; label: string; items: Ass
 
 interface InvestmentTransactionModalProps {
   mode: "add" | "edit";
+  initial?: {
+    asset_id: number;
+    transaction_type: "BUY" | "SELL";
+    quantity: number;
+    price: number;
+    date: string;
+  };
   assets: Asset[];
   holdings?: Holding[];
   onSubmit: (data: {
@@ -65,8 +72,18 @@ interface InvestmentTransactionModalProps {
   loading: boolean;
 }
 
-export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClose, loading }: InvestmentTransactionModalProps) {
-  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+export function TransactionModal({ mode, initial, assets, holdings = [], onSubmit, onClose, loading }: InvestmentTransactionModalProps) {
+  const [form, setForm] = useState<FormData>(
+    initial
+      ? {
+          asset_id: String(initial.asset_id),
+          transaction_type: initial.transaction_type,
+          quantity: String(initial.quantity),
+          price: String(initial.price),
+          date: initial.date.split("T")[0],
+        }
+      : EMPTY_FORM
+  );
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [submitError, setSubmitError] = useState("");
   const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
@@ -173,7 +190,7 @@ export function TransactionModal({ mode, assets, holdings = [], onSubmit, onClos
           {/* Asset */}
           <div>
             <label className="block text-xs font-medium text-white/50 mb-1.5">Asset</label>
-            <SelectPrimitive.Root value={form.asset_id} onValueChange={handleAssetChange}>
+            <SelectPrimitive.Root value={form.asset_id} onValueChange={handleAssetChange} disabled={mode === "edit"}>
               <SelectPrimitive.Trigger
                 className={cn(
                   "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors data-[placeholder]:text-white/20",

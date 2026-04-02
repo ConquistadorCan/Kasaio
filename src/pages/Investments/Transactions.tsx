@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useInvestmentStore } from "../../store/useInvestmentStore";
 import { investmentTransactionsApi } from "../../api/investmentTransactions";
 import { holdingsApi } from "../../api/holdings";
@@ -8,15 +8,19 @@ import { formatCurrency, formatDate } from "../../lib/formatters";
 import { LoadingState, ErrorState } from "../../components/ui/ErrorComponents";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
 import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { cn } from "../../lib/utils";
+import type { InvestmentTransaction } from "../../types/investments";
 
 export function InvestmentTransactions() {
-  const { investmentTransactions, assets, holdings, setInvestmentTransactions, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
+  const { investmentTransactions, assets, holdings, setInvestmentTransactions, addInvestmentTransaction, updateInvestmentTransaction, removeInvestmentTransaction, refreshHolding, removeHolding } = useInvestmentStore();
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [mutating, setMutating] = useState(false);
+  const [editing, setEditing] = useState<InvestmentTransaction | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [filterAsset, setFilterAsset] = useState<number | "all">("all");
   const [filterType, setFilterType] = useState<"BUY" | "SELL" | "INCOME" | "all">("all");
@@ -87,6 +91,77 @@ export function InvestmentTransactions() {
     }
   }
 
+
+  async function handleEdit(data: {
+    asset_id: number;
+    transaction_type: "BUY" | "SELL";
+    quantity: number;
+    price: number;
+    date: string;
+  }): Promise<string | undefined> {
+    if (!editing) return;
+    setMutating(true);
+    try {
+      const updated = await investmentTransactionsApi.update(editing.id, {
+        transaction_type: data.transaction_type,
+        quantity: data.quantity,
+        price: data.price,
+        date: new Date(data.date).toISOString(),
+      });
+      updateInvestmentTransaction(updated);
+      const updatedHolding = await holdingsApi.get(data.asset_id);
+      refreshHolding(updatedHolding);
+      setEditing(null);
+    } catch (err) {
+      await logError("Failed to update investment transaction", err);
+      return "Failed to update transaction. Please try again.";
+    } finally {
+      setMutating(false);
+    }
+  }
+
+  async function handleEditIncome(data: {
+    asset_id: number;
+    transaction_type: "INCOME";
+    quantity: number;
+    price: number;
+    date: string;
+  }): Promise<string | undefined> {
+    if (!editing) return;
+    setMutating(true);
+    try {
+      const updated = await investmentTransactionsApi.update(editing.id, {
+        transaction_type: data.transaction_type,
+        quantity: data.quantity,
+        price: data.price,
+        date: new Date(data.date).toISOString(),
+      });
+      updateInvestmentTransaction(updated);
+      setEditing(null);
+    } catch (err) {
+      await logError("Failed to update income transaction", err);
+      return "Failed to update transaction. Please try again.";
+    } finally {
+      setMutating(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    const txn = investmentTransactions.find((t) => t.id === id);
+    if (!txn) return;
+    try {
+      await investmentTransactionsApi.delete(id);
+      removeInvestmentTransaction(id);
+      try {
+        const updatedHolding = await holdingsApi.get(txn.asset_id);
+        refreshHolding(updatedHolding);
+      } catch {
+        removeHolding(txn.asset_id);
+      }
+    } catch (err) {
+      await logError("Failed to delete investment transaction", err);
+    }
+  }
 
   const sorted = [...investmentTransactions]
     .filter((t) => filterAsset === "all" || t.asset_id === filterAsset)
@@ -170,8 +245,8 @@ export function InvestmentTransactions() {
         <ErrorState message={fetchError!} onRetry={fetchTransactions} />
       ) : (
         <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-          <div className="grid grid-cols-[100px_1fr_80px_110px_110px_120px] px-5 py-3 border-b border-white/5 shrink-0">
-            {["Date", "Asset", "Type", "Qty (g)", "Price", "Total"].map((col) =>
+          <div className="grid grid-cols-[100px_1fr_80px_110px_110px_120px_64px] px-5 py-3 border-b border-white/5 shrink-0">
+            {["Date", "Asset", "Type", "Qty (g)", "Price", "Total", ""].map((col) =>
               col === "Date" ? (
                 <button
                   key={col}
@@ -201,7 +276,7 @@ export function InvestmentTransactions() {
                 return (
                   <div
                     key={t.id}
-                    className="grid grid-cols-[100px_1fr_80px_110px_110px_120px] px-5 py-3.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                    className="group grid grid-cols-[100px_1fr_80px_110px_110px_120px_64px] px-5 py-3.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
                   >
                     <span className="text-sm text-white/40">{formatDate(t.date)}</span>
                     <div>
@@ -223,6 +298,20 @@ export function InvestmentTransactions() {
                     <span className="text-sm text-white/70 font-mono">{t.quantity.toFixed(2)}</span>
                     <span className="text-sm text-white/70 font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(t.price)}</span>
                     <span className="text-sm text-white font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(total)}</span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                      <button
+                        onClick={() => setEditing(t)}
+                        className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(t.id)}
+                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -247,6 +336,51 @@ export function InvestmentTransactions() {
           onSubmit={handleAddIncome}
           onClose={() => setShowIncomeModal(false)}
           loading={mutating}
+        />
+      )}
+
+      {editing && editing.transaction_type !== "INCOME" && (
+        <TransactionModal
+          mode="edit"
+          initial={{
+            asset_id: editing.asset_id,
+            transaction_type: editing.transaction_type as "BUY" | "SELL",
+            quantity: editing.quantity,
+            price: editing.price,
+            date: editing.date,
+          }}
+          assets={assets}
+          holdings={holdings}
+          onSubmit={handleEdit}
+          onClose={() => setEditing(null)}
+          loading={mutating}
+        />
+      )}
+
+      {editing && editing.transaction_type === "INCOME" && (
+        <IncomeTransactionModal
+          mode="edit"
+          prefillAssetId={editing.asset_id}
+          prefillQuantity={editing.quantity}
+          prefillPricePerUnit={editing.price}
+          prefillDate={editing.date}
+          onSubmit={handleEditIncome}
+          onClose={() => setEditing(null)}
+          loading={mutating}
+        />
+      )}
+
+      {confirmId !== null && (
+        <ConfirmDialog
+          title="Delete transaction?"
+          description="This will recalculate your holding. This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => {
+            handleDelete(confirmId);
+            setConfirmId(null);
+          }}
+          onCancel={() => setConfirmId(null)}
+          danger
         />
       )}
     </div>
