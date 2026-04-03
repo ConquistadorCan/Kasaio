@@ -173,16 +173,36 @@ interface DetailsModalProps {
 function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalProps) {
   const [form, setForm] = useState({
     maturity_date: asset.maturity_date ?? "",
-    coupon_rate: asset.coupon_rate != null ? String(asset.coupon_rate * 100) : "",
+    coupon_rate: asset.coupon_rate != null ? String(parseFloat((asset.coupon_rate * 100).toPrecision(10))) : "",
     coupon_frequency: asset.coupon_frequency != null ? String(asset.coupon_frequency) : "2",
     first_coupon_date: asset.first_coupon_date ?? "",
     face_value: asset.face_value != null ? String(asset.face_value) : "1000",
+    coupon_price: (() => {
+      const r = asset.coupon_rate, fv = asset.face_value, freq = asset.coupon_frequency;
+      if (r != null && fv != null && freq) return String(parseFloat(((fv * r) / freq).toPrecision(10)));
+      return "";
+    })(),
   });
+  const [lastEdited, setLastEdited] = useState<"rate" | "price">("rate");
+
+  function fp(n: number): string { return String(parseFloat(n.toPrecision(10))); }
+
+  function calcPrice(rate: string, fv: string, freq: string): string {
+    const r = parseFloat(rate), f = parseFloat(fv), q = parseFloat(freq);
+    if (!r || !f || !q) return "";
+    return fp((f * r) / 100 / q);
+  }
+
+  function calcRate(price: string, fv: string, freq: string): string {
+    const p = parseFloat(price), f = parseFloat(fv), q = parseFloat(freq);
+    if (!p || !f || !q) return "";
+    return fp((p * q) / f * 100);
+  }
 
   async function handleSave() {
     await onSave({
       maturity_date: form.maturity_date || null,
-      coupon_rate: form.coupon_rate ? Number(form.coupon_rate) / 100 : null,
+      coupon_rate: form.coupon_rate ? parseFloat((Number(form.coupon_rate) / 100).toPrecision(10)) : null,
       coupon_frequency: form.coupon_frequency ? Number(form.coupon_frequency) : null,
       first_coupon_date: form.first_coupon_date || null,
       face_value: form.face_value ? Number(form.face_value) : null,
@@ -203,7 +223,13 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
             <label className={labelCls}>Face Value (USD per bond)</label>
             <input
               type="number" value={form.face_value} placeholder="1000"
-              onChange={(e) => setForm((p) => ({ ...p, face_value: e.target.value }))}
+              onChange={(e) => {
+                const fv = e.target.value;
+                setForm((p) => lastEdited === "rate"
+                  ? { ...p, face_value: fv, coupon_price: calcPrice(p.coupon_rate, fv, p.coupon_frequency) }
+                  : { ...p, face_value: fv, coupon_rate: calcRate(p.coupon_price, fv, p.coupon_frequency) }
+                );
+              }}
               className={inputCls}
             />
           </div>
@@ -211,7 +237,24 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
             <label className={labelCls}>Annual Coupon Rate (%)</label>
             <input
               type="number" value={form.coupon_rate} placeholder="6.5" step="0.01"
-              onChange={(e) => setForm((p) => ({ ...p, coupon_rate: e.target.value }))}
+              onChange={(e) => {
+                const rate = e.target.value;
+                setLastEdited("rate");
+                setForm((p) => ({ ...p, coupon_rate: rate, coupon_price: calcPrice(rate, p.face_value, p.coupon_frequency) }));
+              }}
+              className={inputCls}
+            />
+          </div>
+          <div className="flex justify-center text-white/20 text-xs select-none -my-1">↕</div>
+          <div>
+            <label className={labelCls}>Coupon Price (per bond per payment)</label>
+            <input
+              type="number" value={form.coupon_price} placeholder="e.g. 32.5" step="any" min="0"
+              onChange={(e) => {
+                const price = e.target.value;
+                setLastEdited("price");
+                setForm((p) => ({ ...p, coupon_price: price, coupon_rate: calcRate(price, p.face_value, p.coupon_frequency) }));
+              }}
               className={inputCls}
             />
           </div>
@@ -221,7 +264,10 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
               {[{ v: "1", label: "Annual" }, { v: "2", label: "Semi-annual" }].map(({ v, label }) => (
                 <button
                   key={v}
-                  onClick={() => setForm((p) => ({ ...p, coupon_frequency: v }))}
+                  onClick={() => setForm((p) => lastEdited === "rate"
+                    ? { ...p, coupon_frequency: v, coupon_price: calcPrice(p.coupon_rate, p.face_value, v) }
+                    : { ...p, coupon_frequency: v, coupon_rate: calcRate(p.coupon_price, p.face_value, v) }
+                  )}
                   className={cn(
                     "flex-1 py-2 rounded-lg text-sm font-medium transition-colors border",
                     form.coupon_frequency === v
