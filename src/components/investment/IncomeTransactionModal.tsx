@@ -56,9 +56,12 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
   const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
   const pickerYear = currentPickerDate.getFullYear();
 
-  const activeAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
-  const pastAssets = assets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity === 0));
-  const neverHeldAssets = assets.filter((a) => !holdings.some((h) => h.asset_id === a.id));
+  const INCOME_ELIGIBLE = ["EUROBOND", "ETF", "TEFAS_FUND"] as const;
+  const incomeEligibleActive = assets.filter((a) => INCOME_ELIGIBLE.includes(a.asset_type as any) && holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
+  const incomeEligiblePast   = assets.filter((a) => INCOME_ELIGIBLE.includes(a.asset_type as any) && holdings.some((h) => h.asset_id === a.id && h.quantity === 0));
+  const otherActive          = assets.filter((a) => !INCOME_ELIGIBLE.includes(a.asset_type as any) && holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
+  const otherPast            = assets.filter((a) => !INCOME_ELIGIBLE.includes(a.asset_type as any) && holdings.some((h) => h.asset_id === a.id && h.quantity === 0));
+  const neverHeldAssets      = assets.filter((a) => !holdings.some((h) => h.asset_id === a.id));
 
   const selectedAsset = form.asset_id ? assets.find((a) => a.id === Number(form.asset_id)) : undefined;
   const currency = selectedAsset?.currency ?? "TRY";
@@ -135,12 +138,13 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
                   className="z-50 w-[var(--radix-select-trigger-width)] bg-[#141422] border border-white/10 rounded-lg shadow-xl overflow-hidden"
                 >
                   <SelectPrimitive.Viewport className="p-1">
-                    {activeAssets.length > 0 && (
+                    {/* Income-Eligible Active */}
+                    {incomeEligibleActive.length > 0 && (
                       <SelectPrimitive.Group>
                         <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
-                          Active Holdings
+                          Income-Eligible
                         </SelectPrimitive.Label>
-                        {activeAssets.map((a) => {
+                        {incomeEligibleActive.map((a) => {
                           const holding = holdings.find((h) => h.asset_id === a.id);
                           return (
                             <SelectPrimitive.Item
@@ -163,14 +167,17 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
                       </SelectPrimitive.Group>
                     )}
 
-                    {pastAssets.length > 0 && (
+                    {/* Income-Eligible Past */}
+                    {incomeEligiblePast.length > 0 && (
                       <>
-                        {activeAssets.length > 0 && <div className="my-1 h-px bg-white/5" />}
+                        {incomeEligibleActive.length > 0 && <div className="my-1 h-px bg-white/5" />}
                         <SelectPrimitive.Group>
-                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
-                            Past Assets
-                          </SelectPrimitive.Label>
-                          {pastAssets.map((a) => (
+                          {incomeEligibleActive.length === 0 && (
+                            <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                              Income-Eligible
+                            </SelectPrimitive.Label>
+                          )}
+                          {incomeEligiblePast.map((a) => (
                             <SelectPrimitive.Item
                               key={a.id}
                               value={String(a.id)}
@@ -187,9 +194,69 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
                       </>
                     )}
 
+                    {/* Other Holdings Active */}
+                    {otherActive.length > 0 && (
+                      <>
+                        {(incomeEligibleActive.length > 0 || incomeEligiblePast.length > 0) && <div className="my-1 h-px bg-white/5" />}
+                        <SelectPrimitive.Group>
+                          <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                            Other Holdings
+                          </SelectPrimitive.Label>
+                          {otherActive.map((a) => {
+                            const holding = holdings.find((h) => h.asset_id === a.id);
+                            return (
+                              <SelectPrimitive.Item
+                                key={a.id}
+                                value={String(a.id)}
+                                className="flex items-center justify-between px-3 py-2 text-sm text-white/50 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                              >
+                                <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                                <span className="flex items-center gap-2 shrink-0 ml-2">
+                                  {holding && (
+                                    <span className="text-xs text-white/20 font-mono tabular-nums">
+                                      {holding.quantity.toLocaleString("tr-TR", { maximumFractionDigits: 6 })}
+                                    </span>
+                                  )}
+                                  <span className="font-mono text-xs text-white/25">{a.symbol}</span>
+                                </span>
+                              </SelectPrimitive.Item>
+                            );
+                          })}
+                        </SelectPrimitive.Group>
+                      </>
+                    )}
+
+                    {/* Other Holdings Past */}
+                    {otherPast.length > 0 && (
+                      <>
+                        {otherActive.length === 0 && (incomeEligibleActive.length > 0 || incomeEligiblePast.length > 0) && <div className="my-1 h-px bg-white/5" />}
+                        <SelectPrimitive.Group>
+                          {otherActive.length === 0 && (
+                            <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+                              Other Holdings
+                            </SelectPrimitive.Label>
+                          )}
+                          {otherPast.map((a) => (
+                            <SelectPrimitive.Item
+                              key={a.id}
+                              value={String(a.id)}
+                              className="flex items-center justify-between px-3 py-2 text-sm text-white/30 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/50 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
+                            >
+                              <SelectPrimitive.ItemText>{a.name}</SelectPrimitive.ItemText>
+                              <span className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-xs text-white/15">sold out</span>
+                                <span className="font-mono text-xs text-white/20">{a.symbol}</span>
+                              </span>
+                            </SelectPrimitive.Item>
+                          ))}
+                        </SelectPrimitive.Group>
+                      </>
+                    )}
+
+                    {/* Never-held assets */}
                     {neverHeldAssets.length > 0 && (
                       <>
-                        {(activeAssets.length > 0 || pastAssets.length > 0) && <div className="my-1 h-px bg-white/5" />}
+                        {(incomeEligibleActive.length > 0 || incomeEligiblePast.length > 0 || otherActive.length > 0 || otherPast.length > 0) && <div className="my-1 h-px bg-white/5" />}
                         <SelectPrimitive.Group>
                           <SelectPrimitive.Label className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">
                             All Assets

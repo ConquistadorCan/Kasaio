@@ -6,11 +6,14 @@ import { holdingsApi } from "../../api/holdings";
 import { logError } from "../../lib/logger";
 import { formatCurrency } from "../../lib/formatters";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
+import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
 import { cn } from "../../lib/utils";
 
 export function TefasFunds() {
   const { assets, holdings, latestPrices, investmentTransactions, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
   const [showModal, setShowModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [prefillIncome, setPrefillIncome] = useState<{ assetId: number; quantity: number } | null>(null);
   const [mutating, setMutating] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
 
@@ -47,6 +50,27 @@ export function TefasFunds() {
     const pnlPct = pnl !== null && costBasis ? (pnl / costBasis) * 100 : null;
     return { asset, holding, latestPrice, currentValue, pnl, pnlPct };
   });
+
+  async function handleAddIncome(data: {
+    asset_id: number;
+    transaction_type: "INCOME";
+    quantity: number;
+    price: number;
+    date: string;
+  }): Promise<string | undefined> {
+    setMutating(true);
+    try {
+      const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
+      addInvestmentTransaction(txn);
+      setShowIncomeModal(false);
+      setPrefillIncome(null);
+    } catch (err) {
+      await logError("Failed to record income", err);
+      return "Failed to record income. Please try again.";
+    } finally {
+      setMutating(false);
+    }
+  }
 
   async function handleAddTransaction(data: {
     asset_id: number;
@@ -90,8 +114,8 @@ export function TefasFunds() {
       </div>
 
       <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-[1fr_120px_120px_120px_120px_120px] px-5 py-3 border-b border-white/5 shrink-0">
-          {["Fund", "Qty", "Avg Cost", "Price", "Value", "P&L"].map((col) => (
+        <div className="grid grid-cols-[1fr_120px_120px_120px_120px_120px_100px] px-5 py-3 border-b border-white/5 shrink-0">
+          {["Fund", "Qty", "Avg Cost", "Price", "Value", "P&L", ""].map((col) => (
             <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
               {col}
             </span>
@@ -107,7 +131,7 @@ export function TefasFunds() {
             {rows.map(({ asset, holding, latestPrice, currentValue, pnl, pnlPct }) => (
               <div
                 key={asset.id}
-                className="grid grid-cols-[1fr_120px_120px_120px_120px_120px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                className="grid grid-cols-[1fr_120px_120px_120px_120px_120px_100px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
               >
                 <div>
                   <p className="text-sm font-medium text-white">{asset.name}</p>
@@ -138,6 +162,14 @@ export function TefasFunds() {
                   ) : (
                     <span className="text-sm text-white/20">—</span>
                   )}
+                </div>
+                <div>
+                  <button
+                    onClick={() => { setPrefillIncome({ assetId: asset.id, quantity: holding?.quantity ?? 0 }); setShowIncomeModal(true); }}
+                    className="text-xs px-2 py-1 rounded-md font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors"
+                  >
+                    Record Income
+                  </button>
                 </div>
               </div>
             ))}
@@ -192,6 +224,16 @@ export function TefasFunds() {
           onSubmit={handleAddTransaction}
           onClose={() => setShowModal(false)}
           loading={mutating}
+        />
+      )}
+
+      {showIncomeModal && (
+        <IncomeTransactionModal
+          onSubmit={handleAddIncome}
+          onClose={() => { setShowIncomeModal(false); setPrefillIncome(null); }}
+          loading={mutating}
+          prefillAssetId={prefillIncome?.assetId}
+          prefillQuantity={prefillIncome?.quantity}
         />
       )}
     </div>
