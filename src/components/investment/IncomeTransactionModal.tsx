@@ -52,6 +52,13 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
   const [submitError, setSubmitError] = useState("");
   const [pickerView, setPickerView] = useState<"day" | "month" | "year">("day");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [total, setTotal] = useState<string>(() => {
+    if (prefillQuantity != null && prefillPricePerUnit != null) {
+      return String(parseFloat((prefillQuantity * prefillPricePerUnit).toFixed(2)));
+    }
+    return "";
+  });
+  const [lastEdited, setLastEdited] = useState<"price" | "total">("price");
 
   const currentPickerDate = form.date ? new Date(form.date + "T12:00:00") : new Date();
   const pickerYear = currentPickerDate.getFullYear();
@@ -76,11 +83,85 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
   function handleAssetChange(assetId: string) {
     const holding = holdings.find((h) => h.asset_id === Number(assetId) && h.quantity > 0);
     if (holding) {
-      setForm((prev) => ({ ...prev, asset_id: assetId, quantity: String(holding.quantity) }));
+      const qty = holding.quantity;
+      setForm((prev) => {
+        const newTotal = prev.price && !isNaN(Number(prev.price))
+          ? String(parseFloat((qty * Number(prev.price)).toFixed(2)))
+          : "";
+        setTotal(newTotal);
+        return { ...prev, asset_id: assetId, quantity: String(qty) };
+      });
     } else {
       setForm((prev) => ({ ...prev, asset_id: assetId, quantity: "" }));
+      setTotal("");
     }
     setErrors((prev) => ({ ...prev, asset_id: undefined, quantity: undefined }));
+    setSubmitError("");
+  }
+
+  function handlePriceChange(val: string) {
+    setLastEdited("price");
+    setForm((prev) => {
+      const qty = Number(prev.quantity);
+      const pr = Number(val);
+      if (val !== "" && !isNaN(qty) && qty > 0 && !isNaN(pr)) {
+        setTotal(String(parseFloat((qty * pr).toFixed(2))));
+      } else {
+        setTotal("");
+      }
+      return { ...prev, price: val };
+    });
+    setErrors((prev) => ({ ...prev, price: undefined }));
+    setSubmitError("");
+  }
+
+  function handleTotalChange(val: string) {
+    setLastEdited("total");
+    setTotal(val);
+    setForm((prev) => {
+      const qty = Number(prev.quantity);
+      const tot = Number(val);
+      if (val !== "" && !isNaN(qty) && qty > 0 && !isNaN(tot)) {
+        return { ...prev, price: String(parseFloat((tot / qty).toFixed(2))) };
+      }
+      return { ...prev, price: "" };
+    });
+    setErrors((prev) => ({ ...prev, price: undefined }));
+    setSubmitError("");
+  }
+
+  function handleQuantityChange(val: string) {
+    const qty = Number(val);
+    const hasValidQty = val !== "" && !isNaN(qty) && qty > 0;
+
+    if (hasValidQty) {
+      if (lastEdited === "price") {
+        setForm((prev) => {
+          if (prev.price && !isNaN(Number(prev.price))) {
+            setTotal(String(parseFloat((qty * Number(prev.price)).toFixed(2))));
+          } else {
+            setTotal("");
+          }
+          return { ...prev, quantity: val };
+        });
+      } else {
+        const tot = Number(total);
+        if (total !== "" && !isNaN(tot)) {
+          setForm((prev) => ({ ...prev, quantity: val, price: String(parseFloat((tot / qty).toFixed(2))) }));
+        } else {
+          setForm((prev) => ({ ...prev, quantity: val }));
+        }
+      }
+    } else {
+      if (lastEdited === "price") {
+        setTotal("");
+        setForm((prev) => ({ ...prev, quantity: val }));
+      } else {
+        setForm((prev) => ({ ...prev, quantity: val, price: "" }));
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, quantity: undefined }));
     setSubmitError("");
   }
 
@@ -287,7 +368,7 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
             <input
               type="number"
               value={form.quantity}
-              onChange={(e) => field("quantity", e.target.value)}
+              onChange={(e) => handleQuantityChange(e.target.value)}
               placeholder="0.00"
               min="0"
               className={cn(
@@ -298,33 +379,38 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
             {errors.quantity && <p className="text-xs text-red-400 mt-1">{errors.quantity}</p>}
           </div>
 
-          {/* Income per unit */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Income per unit ({currency})
-            </label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => field("price", e.target.value)}
-              placeholder="0.00"
-              min="0"
-              className={cn(
-                "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors font-mono",
-                errors.price ? "border-red-500/40" : "border-white/[0.08] focus:border-violet-500/50"
-              )}
-            />
-            {errors.price && <p className="text-xs text-red-400 mt-1">{errors.price}</p>}
-          </div>
-
-          {/* Total preview */}
-          <div className="flex items-center justify-between px-3 py-2 bg-amber-500/5 border border-amber-500/15 rounded-lg">
-            <span className="text-xs text-white/40">Total income</span>
-            <span className="text-sm font-mono font-medium text-amber-400">
-              {form.quantity && form.price && !isNaN(Number(form.quantity)) && !isNaN(Number(form.price))
-                ? `${currencySymbol}${(Number(form.quantity) * Number(form.price)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : "—"}
-            </span>
+          {/* Income per unit ↔ Total income */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-white/50 mb-1.5">
+                Income per unit ({currency})
+              </label>
+              <input
+                type="number"
+                value={form.price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                className={cn(
+                  "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors font-mono",
+                  errors.price ? "border-red-500/40" : "border-white/[0.08] focus:border-violet-500/50"
+                )}
+              />
+              {errors.price && <p className="text-xs text-red-400 mt-1">{errors.price}</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-white/50 mb-1.5">
+                Total income ({currency})
+              </label>
+              <input
+                type="number"
+                value={total}
+                onChange={(e) => handleTotalChange(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                className="w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-amber-400 placeholder:text-white/20 outline-none transition-colors font-mono focus:border-amber-500/50"
+              />
+            </div>
           </div>
 
           {/* Date */}
