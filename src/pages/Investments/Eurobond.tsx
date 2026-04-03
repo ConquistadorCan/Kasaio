@@ -513,7 +513,7 @@ export function Eurobond() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [mutating, setMutating] = useState(false);
-  const [prefillIncome, setPrefillIncome] = useState<{ asset: Asset; quantity: number; pricePerUnit: number } | null>(null);
+  const [prefillIncome, setPrefillIncome] = useState<{ asset: Asset; quantity: number; pricePerUnit: number; date: string } | null>(null);
 
   const allEurobondAssets = assets.filter((a) => a.asset_type === "EUROBOND");
   const eurobondAssets = allEurobondAssets.filter((a) => holdings.some((h) => h.asset_id === a.id && h.quantity > 0));
@@ -582,7 +582,7 @@ export function Eurobond() {
     const pricePerUnit = event.asset.face_value && event.asset.coupon_rate && event.asset.coupon_frequency
       ? Number(event.asset.face_value) * Number(event.asset.coupon_rate) / event.asset.coupon_frequency
       : 0;
-    setPrefillIncome({ asset: event.asset, quantity: holding.quantity, pricePerUnit });
+    setPrefillIncome({ asset: event.asset, quantity: holding.quantity, pricePerUnit, date: event.date.toISOString().split("T")[0] });
     setShowIncomeModal(true);
   }
 
@@ -832,6 +832,7 @@ export function Eurobond() {
           prefillAssetId={prefillIncome?.asset.id}
           prefillQuantity={prefillIncome?.quantity}
           prefillPricePerUnit={prefillIncome?.pricePerUnit}
+          prefillDate={prefillIncome?.date}
         />
       )}
 
