@@ -13,6 +13,7 @@ import type { TransactionType } from "../types";
 import { cn } from "../lib/utils";
 
 type WalletView = "TRY" | "USD";
+type AllocationView = "TRY" | "USD" | "Combined";
 
 function getLast6Months(): { key: string; label: string }[] {
   const months = [];
@@ -90,7 +91,22 @@ function CustomTooltip({ active, payload, label, symbol = "₺" }: CustomTooltip
   );
 }
 
-const DONUT_COLORS = ["#7c5cfc", "#34d399", "#fbbf24", "#f87171", "#60a5fa"];
+const ASSET_TYPE_COLORS: Record<string, string> = {
+  COMMODITY: "#fbbf24",
+  CRYPTOCURRENCY: "#f87171",
+  TEFAS_FUND: "#7c5cfc",
+  ETF: "#60a5fa",
+  EUROBOND: "#34d399",
+  BES: "#a78bfa",
+};
+const ASSET_TYPE_LABELS: Record<string, string> = {
+  COMMODITY: "Commodity",
+  CRYPTOCURRENCY: "Crypto",
+  TEFAS_FUND: "TEFAS",
+  ETF: "ETF",
+  EUROBOND: "Eurobond",
+  BES: "BES",
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -98,6 +114,9 @@ export function Dashboard() {
   const { assets, holdings, latestPrices, investmentTransactions } = useInvestmentStore();
   const { plans: besPlans } = useBESStore();
   const [walletView, setWalletView] = useState<WalletView>("TRY");
+  const [allocationView, setAllocationView] = useState<AllocationView>("TRY");
+  const [usdRate, setUsdRate] = useState<number>(38);
+  const [usdRateInput, setUsdRateInput] = useState<string>("38");
 
   const sym = walletView === "USD" ? "$" : "₺";
 
@@ -187,22 +206,53 @@ export function Dashboard() {
     }).filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 5);
   }, [walletTxns, categories]);
 
-  // ── Asset allocation ────────────────────────────────────────────────────────
-  const assetAllocation = useMemo(() => {
-    const holdingRows = walletHoldings.map((h) => {
-      const asset = walletAssets.find((a) => a.id === h.asset_id);
+  // ── Asset allocation by type ────────────────────────────────────────────────
+  const tryTypeAllocation = useMemo(() => {
+    const tryAssets = assets.filter((a) => a.currency === "TRY");
+    const grouped: Record<string, number> = {};
+    for (const h of holdings.filter((h) => tryAssets.some((a) => a.id === h.asset_id) && h.quantity > 0)) {
+      const asset = tryAssets.find((a) => a.id === h.asset_id)!;
       const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
-      return { name: asset?.name ?? "Unknown", value: price * h.quantity };
-    }).filter((a) => a.value > 0);
+      grouped[asset.asset_type] = (grouped[asset.asset_type] ?? 0) + price * h.quantity;
+    }
+    const besValue = besPlans.reduce((s, p) => s + (p.current_value ?? p.total_paid), 0);
+    if (besValue > 0) grouped["BES"] = besValue;
+    return Object.entries(grouped)
+      .filter(([, v]) => v > 0)
+      .map(([key, value]) => ({ key, name: ASSET_TYPE_LABELS[key] ?? key, value, color: ASSET_TYPE_COLORS[key] ?? "#7c5cfc" }))
+      .sort((a, b) => b.value - a.value);
+  }, [assets, holdings, latestPrices, besPlans]);
 
-    const besRows = walletView === "TRY"
-      ? besPlans
-          .filter((p) => (p.current_value ?? 0) > 0)
-          .map((p) => ({ name: p.name, value: p.current_value! }))
-      : [];
+  const usdTypeAllocation = useMemo(() => {
+    const usdAssets = assets.filter((a) => a.currency === "USD");
+    const grouped: Record<string, number> = {};
+    for (const h of holdings.filter((h) => usdAssets.some((a) => a.id === h.asset_id) && h.quantity > 0)) {
+      const asset = usdAssets.find((a) => a.id === h.asset_id)!;
+      const price = latestPrices[h.asset_id]?.price ?? h.average_cost;
+      grouped[asset.asset_type] = (grouped[asset.asset_type] ?? 0) + price * h.quantity;
+    }
+    return Object.entries(grouped)
+      .filter(([, v]) => v > 0)
+      .map(([key, value]) => ({ key, name: ASSET_TYPE_LABELS[key] ?? key, value, color: ASSET_TYPE_COLORS[key] ?? "#7c5cfc" }))
+      .sort((a, b) => b.value - a.value);
+  }, [assets, holdings, latestPrices]);
 
-    return [...holdingRows, ...besRows];
-  }, [walletHoldings, walletAssets, latestPrices, besPlans, walletView]);
+  const combinedTypeAllocation = useMemo(() => {
+    const merged: Record<string, { key: string; name: string; value: number; color: string }> = {};
+    for (const s of tryTypeAllocation) merged[s.key] = { ...s };
+    for (const s of usdTypeAllocation) {
+      const converted = s.value * usdRate;
+      if (merged[s.key]) merged[s.key].value += converted;
+      else merged[s.key] = { ...s, value: converted };
+    }
+    return Object.values(merged).filter((s) => s.value > 0).sort((a, b) => b.value - a.value);
+  }, [tryTypeAllocation, usdTypeAllocation, usdRate]);
+
+  const activeAllocation =
+    allocationView === "TRY" ? tryTypeAllocation
+    : allocationView === "USD" ? usdTypeAllocation
+    : combinedTypeAllocation;
+  const allocationTotal = activeAllocation.reduce((s, a) => s + a.value, 0);
 
   // ── BES rows (TRY only) ─────────────────────────────────────────────────────
   const besRows = useMemo(() => {
@@ -400,36 +450,88 @@ export function Dashboard() {
           <p className="text-base font-semibold text-white">Portfolio · {walletView}</p>
         </div>
 
-        <div className="grid grid-cols-[180px_1fr] gap-4 mb-4">
-          {/* Donut */}
-          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-medium text-white mb-1">Allocation</p>
-            {assetAllocation.length === 0 ? (
-              <div className="flex items-center justify-center h-24"><p className="text-xs text-white/20">No positions</p></div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={100}>
+        {/* Allocation by type */}
+        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-white">Allocation</p>
+            <div className="flex gap-0.5 bg-white/5 p-0.5 rounded-md">
+              {(["TRY", "USD", "Combined"] as AllocationView[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setAllocationView(v)}
+                  className={cn(
+                    "px-2.5 py-1 rounded text-xs font-medium transition-colors",
+                    allocationView === v ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                  )}
+                >
+                  {v === "TRY" ? "₺ TRY" : v === "USD" ? "$ USD" : "Combined"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {allocationView === "Combined" && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-white/40">Rate: 1 $ =</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={usdRateInput}
+                onChange={(e) => setUsdRateInput(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseFloat(usdRateInput);
+                  if (!isNaN(parsed) && parsed > 0) { setUsdRate(parsed); setUsdRateInput(parsed.toString()); }
+                  else setUsdRateInput(usdRate.toString());
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const parsed = parseFloat(usdRateInput);
+                    if (!isNaN(parsed) && parsed > 0) { setUsdRate(parsed); setUsdRateInput(parsed.toString()); }
+                    else setUsdRateInput(usdRate.toString());
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="w-16 bg-white/5 border border-white/10 rounded px-2 py-0.5 text-xs text-white font-mono outline-none text-right"
+              />
+              <span className="text-xs text-white/40">₺</span>
+            </div>
+          )}
+
+          {activeAllocation.length === 0 ? (
+            <div className="flex items-center justify-center h-16"><p className="text-xs text-white/20">No positions</p></div>
+          ) : (
+            <div className="flex gap-5 items-center">
+              <div className="shrink-0">
+                <ResponsiveContainer width={110} height={110}>
                   <PieChart>
-                    <Pie data={assetAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46}>
-                      {assetAllocation.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} opacity={0.85} />)}
+                    <Pie data={activeAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={50} strokeWidth={0}>
+                      {activeAllocation.map((s) => <Cell key={s.key} fill={s.color} opacity={0.9} />)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex flex-col gap-1.5 mt-2">
-                  {assetAllocation.map((a, i) => (
-                    <div key={a.name} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                      <span className="text-xs text-white/50 truncate">{a.name}</span>
+              </div>
+              <div className="flex-1 flex flex-col gap-2">
+                {activeAllocation.map((s) => {
+                  const pct = allocationTotal > 0 ? (s.value / allocationTotal) * 100 : 0;
+                  return (
+                    <div key={s.key} className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                      <span className="text-xs text-white/60 w-20 shrink-0">{s.name}</span>
+                      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: s.color }} />
+                      </div>
+                      <span className="text-xs text-white/50 font-mono w-10 text-right shrink-0">{pct.toFixed(1)}%</span>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Holdings table */}
-          <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5">
+        {/* Holdings table */}
+        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden mb-4">
+          <div className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5">
               {["Asset", "Qty", "Value", "P&L"].map((col) => (
                 <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
               ))}
@@ -492,7 +594,6 @@ export function Dashboard() {
                 ))}
               </>
             )}
-          </div>
         </div>
 
         {/* Recent investments */}
