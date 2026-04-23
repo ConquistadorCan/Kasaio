@@ -35,10 +35,7 @@ jobs:
               method: "POST",
               headers,
               body: JSON.stringify({
-                filter: {
-                  property: "Name",
-                  title: { equals: repoName }
-                }
+                filter: { property: "Name", title: { equals: repoName } }
               })
             });
             const projectData = await projectSearch.json();
@@ -49,8 +46,10 @@ jobs:
               headers,
               body: JSON.stringify({
                 filter: {
-                  property: "GitHub Issue",
-                  number: { equals: issueNumber }
+                  and: [
+                    { property: "GitHub Issue", number: { equals: issueNumber } },
+                    { property: "Project", relation: { contains: projectPageId } }
+                  ]
                 }
               })
             });
@@ -72,17 +71,13 @@ jobs:
               console.log(`Updated task for issue #${issueNumber} → Durum: ${isDone}`);
             } else {
               const properties = {
-                "Task Name": {
-                  title: [{ text: { content: issueTitle } }]
-                },
+                "Task Name": { title: [{ text: { content: issueTitle } }] },
                 "Durum": { checkbox: isDone },
                 "GitHub Issue": { number: issueNumber }
               };
 
               if (projectPageId) {
-                properties["Project"] = {
-                  relation: [{ id: projectPageId }]
-                };
+                properties["Project"] = { relation: [{ id: projectPageId }] };
               }
 
               await fetch("https://api.notion.com/v1/pages", {
