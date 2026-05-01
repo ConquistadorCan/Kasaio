@@ -2,6 +2,27 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [2.1.0] - 2026-05-01
+
+### Added
+
+- Added a new Insights page with income/expense trends, savings-rate KPIs, and category breakdowns.
+- Added a persistent settings drawer with category management, price-source status, wallet preference, app version, and update controls.
+- Added reusable UI primitives for page headers, section headers, stats, pills, empty states, charts, sparklines, and modals.
+
+### Improved
+
+- Refreshed the main application shell with a compact sidebar, top breadcrumb bar, updated typography, and consistent surface/table styling.
+- Redesigned dashboard, transactions, categories, portfolio, BES, ETF, TEFAS, crypto, commodities, Eurobond, price update, and investment transaction screens.
+- Added wallet-view persistence for TRY/USD-focused cash-flow and insight views.
+- Improved development setup docs for `.venv`, Windows activation, and Linux Tauri prerequisites.
+
+### Fixed
+
+- Improved local Tauri development by supporting both `.venv` and `venv` Python environments across platforms.
+- Added a debug sidecar placeholder during Tauri development so missing sidecar binaries do not block local startup.
+- Removed unused TypeScript symbols that blocked the production frontend build.
+
 ## [2.0.3] - 2026-05-01
 
 ### Fixed

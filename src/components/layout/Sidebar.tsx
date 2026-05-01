@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, ArrowLeftRight, Sparkles,
   BarChart2, Landmark, ShieldCheck, Settings,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose,
 } from "lucide-react";
 import { useUIStore } from "../../store/useUIStore";
 

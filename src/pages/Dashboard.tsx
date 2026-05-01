@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, ArrowRight, BarChart2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -10,8 +10,6 @@ import { useInvestmentStore } from "../store/useInvestmentStore";
 import { useBESStore } from "../store/useBESStore";
 import { useUIStore } from "../store/useUIStore";
 import { formatCurrency, formatDateShort } from "../lib/formatters";
-import type { TransactionType } from "../types";
-import { cn } from "../lib/utils";
 
 type WalletView = "TRY" | "USD";
 type AllocationView = "TRY" | "USD" | "Combined";
@@ -28,47 +26,6 @@ function getLast6Months(): { key: string; label: string }[] {
     });
   }
   return months;
-}
-
-interface StatCardProps {
-  label: string;
-  value: string;
-  sub?: string;
-  subColor?: string;
-  icon: React.ReactNode;
-  variant: "income" | "expense" | "neutral" | "violet";
-  symbol?: string;
-}
-
-function StatCard({ label, value, sub, subColor, icon, variant, symbol = "₺" }: StatCardProps) {
-  const colors = {
-    income: "text-emerald-400",
-    expense: "text-red-400",
-    neutral: "text-violet-400",
-    violet: "text-violet-400",
-  };
-  return (
-    <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl px-5 py-4 flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-white/40 uppercase tracking-wider">{label}</span>
-        {sub ? (
-          <span className={cn(
-            "text-xs font-mono font-medium px-1.5 py-0.5 rounded-md",
-            subColor === "text-emerald-400" ? "bg-emerald-500/10 text-emerald-400" :
-            subColor === "text-red-400"     ? "bg-red-500/10 text-red-400" :
-                                              "text-white/30"
-          )}>
-            {sub}
-          </span>
-        ) : (
-          <span className={cn("opacity-60", colors[variant])}>{icon}</span>
-        )}
-      </div>
-      <span className={cn("text-2xl font-semibold tracking-tight font-mono", colors[variant])}>
-        {symbol}{value}
-      </span>
-    </div>
-  );
 }
 
 interface CustomTooltipProps {

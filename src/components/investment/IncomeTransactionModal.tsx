@@ -72,7 +72,6 @@ export function IncomeTransactionModal({ mode = "add", onSubmit, onClose, loadin
 
   const selectedAsset = form.asset_id ? assets.find((a) => a.id === Number(form.asset_id)) : undefined;
   const currency = selectedAsset?.currency ?? "TRY";
-  const currencySymbol = currency === "USD" ? "$" : "₺";
 
   function field(key: keyof FormData, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
