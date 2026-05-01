@@ -3,10 +3,16 @@ use tauri::{Manager, State};
 
 pub struct ApiPort(pub Mutex<u16>);
 pub struct BackendReady(pub Mutex<bool>);
+pub struct BackendError(pub Mutex<Option<String>>);
 
 #[tauri::command]
 fn get_api_port(state: State<ApiPort>) -> u16 {
     *state.0.lock().unwrap()
+}
+
+#[tauri::command]
+fn get_backend_error(state: State<BackendError>) -> Option<String> {
+    state.0.lock().unwrap().clone()
 }
 
 // ── Logging helpers (release only) ──────────────────────────────────────────
@@ -60,13 +66,17 @@ fn log_frontend_error(_app: tauri::AppHandle, message: String) {
     }
 }
 
-// Called by React when it has set up its event listener and is ready to receive backend_ready
+// Called by React after it has registered backend startup listeners.
 #[tauri::command]
 fn frontend_ready(app: tauri::AppHandle) {
     use tauri::Emitter;
     let port = *app.state::<ApiPort>().0.lock().unwrap();
     let backend_ready = *app.state::<BackendReady>().0.lock().unwrap();
-    eprintln!("[kasaio] frontend ready, backend_ready={}, port={}", backend_ready, port);
+    let backend_error = app.state::<BackendError>().0.lock().unwrap().clone();
+    eprintln!(
+        "[kasaio] frontend ready, backend_ready={}, port={}",
+        backend_ready, port
+    );
 
     #[cfg(not(debug_assertions))]
     if let Ok(data_dir) = app.path().app_data_dir() {
@@ -80,6 +90,9 @@ fn frontend_ready(app: tauri::AppHandle) {
     if backend_ready && port != 0 {
         let _ = app.emit("backend_ready", port);
         eprintln!("[kasaio] emitting backend_ready event");
+    } else if let Some(msg) = backend_error {
+        let _ = app.emit("backend_failed", msg);
+        eprintln!("[kasaio] emitting backend_failed event");
     } else {
         *app.state::<BackendReady>().0.lock().unwrap() = false;
         eprintln!("[kasaio] frontend ready, but backend is not ready");
@@ -89,7 +102,7 @@ fn frontend_ready(app: tauri::AppHandle) {
 async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
     use tauri::Emitter;
     let health_url = format!("http://127.0.0.1:{}/health", port);
-    let max_attempts = 120; // 60 seconds — allows time for migrations on fresh install
+    let max_attempts = 120; // 60 seconds after Python reports its selected port.
 
     #[cfg(not(debug_assertions))]
     let log_dir = handle.path().app_data_dir().ok().map(|d| d.join("logs"));
@@ -100,6 +113,7 @@ async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
             if resp.status().is_success() {
                 *handle.state::<ApiPort>().0.lock().unwrap() = port;
                 *handle.state::<BackendReady>().0.lock().unwrap() = true;
+                *handle.state::<BackendError>().0.lock().unwrap() = None;
                 let _ = handle.emit("backend_ready", port);
                 eprintln!("[kasaio] backend ready on port {}", port);
                 #[cfg(not(debug_assertions))]
@@ -109,7 +123,10 @@ async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
                 return;
             }
         }
-        eprintln!("[kasaio] health check attempt {}/{} failed", attempt, max_attempts);
+        eprintln!(
+            "[kasaio] health check attempt {}/{} failed",
+            attempt, max_attempts
+        );
     }
 
     let msg = format!(
@@ -121,6 +138,7 @@ async fn wait_for_backend(port: u16, handle: tauri::AppHandle) {
     if let Some(ref ld) = log_dir {
         write_log(ld, "ERROR", &msg);
     }
+    *handle.state::<BackendError>().0.lock().unwrap() = Some(msg.clone());
     let _ = handle.emit("backend_failed", msg);
 }
 
@@ -132,9 +150,15 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(ApiPort(Mutex::new(0)))
         .manage(BackendReady(Mutex::new(false)))
+        .manage(BackendError(Mutex::new(None)))
         .setup(setup)
         .on_window_event(on_window_event)
-        .invoke_handler(tauri::generate_handler![get_api_port, log_frontend_error, frontend_ready])
+        .invoke_handler(tauri::generate_handler![
+            get_api_port,
+            get_backend_error,
+            log_frontend_error,
+            frontend_ready
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -291,6 +315,8 @@ mod release {
                                 status.code
                             );
                             write_log(&log_dir, "ERROR", &msg);
+                            *handle.state::<super::BackendError>().0.lock().unwrap() =
+                                Some(msg.clone());
                             let _ = handle.emit("backend_failed", msg);
                         }
                     }

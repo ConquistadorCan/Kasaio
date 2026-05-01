@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { listen, emit } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../store/useAppStore";
 import { useInvestmentStore } from "../store/useInvestmentStore";
@@ -13,23 +13,6 @@ import { assetPricesApi } from "../api/assetPrices";
 import { besApi } from "../api/bes";
 import { logError, logInfo } from "../lib/logger";
 import { ApiError } from "../lib/api";
-
-const POLL_INTERVAL_MS = 1000;
-const POLL_MAX_RETRIES = 3;
-
-async function waitForPort(): Promise<number> {
-  await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-
-  for (let attempt = 1; attempt <= POLL_MAX_RETRIES; attempt++) {
-    const port = await invoke<number>("get_api_port");
-    if (port !== 0) return port;
-    if (attempt < POLL_MAX_RETRIES) {
-      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    }
-  }
-
-  throw new Error("Backend did not start in time.");
-}
 
 export function useInitApp() {
   const { setApiPort, setTransactions, setCategories } = useAppStore();
@@ -102,14 +85,27 @@ export function useInitApp() {
           setError("Failed to connect to backend.");
         });
 
-        await emit("frontend_ready");
+        await invoke("frontend_ready");
 
-        const port = await waitForPort();
-        if (loaded) return;
-        loaded = true;
-        unlisten?.();
-        unlistenFailed?.();
-        await loadData(port).catch(handleError);
+        const port = await invoke<number>("get_api_port");
+        if (port !== 0) {
+          if (loaded) return;
+          loaded = true;
+          unlisten?.();
+          unlistenFailed?.();
+          await loadData(port).catch(handleError);
+          return;
+        }
+
+        const backendError = await invoke<string | null>("get_backend_error");
+        if (backendError) {
+          if (loaded) return;
+          loaded = true;
+          unlisten?.();
+          unlistenFailed?.();
+          await logError("Backend failed to start", backendError);
+          setError("Failed to connect to backend.");
+        }
       } catch (err) {
         if (!loaded) {
           loaded = true;
