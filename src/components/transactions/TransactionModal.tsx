@@ -4,7 +4,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { DayPicker } from "react-day-picker";
 import { ChevronDown, CalendarIcon } from "lucide-react";
 import { useAppStore } from "../../store/useAppStore";
-import { cn } from "../../lib/utils";
+import { Modal } from "../ui/primitives";
 import { ErrorBanner } from "../ui/ErrorComponents";
 import { EMPTY_FORM, DAY_PICKER_CLASS_NAMES, type TransactionFormData } from "./types";
 import type { TransactionType } from "../../types";
@@ -17,9 +17,13 @@ interface TransactionModalProps {
   loading: boolean;
 }
 
+const LABEL_STYLE: React.CSSProperties = {
+  display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)",
+  marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em",
+};
+
 export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose, loading }: TransactionModalProps) {
   const allCategories = useAppStore((s) => s.categories);
-  const categories = allCategories;
   const [form, setForm] = useState<TransactionFormData>(initial);
   const [errors, setErrors] = useState<Partial<TransactionFormData>>({});
   const [submitError, setSubmitError] = useState("");
@@ -52,304 +56,320 @@ export function TransactionModal({ mode, initial = EMPTY_FORM, onSubmit, onClose
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-base font-semibold text-white mb-5">
-          {mode === "add" ? "Add Transaction" : "Edit Transaction"}
-        </h2>
-
-        <div className="flex flex-col gap-4">
-          {/* Wallet */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Wallet</label>
-            <div className="flex gap-2">
-              {(["TRY", "USD"] as const).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => field("currency", c)}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
-                    form.currency === c
-                      ? "bg-violet-500/15 text-violet-300 border border-violet-500/25"
-                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
-                  )}
-                >
-                  {c === "TRY" ? "₺ TRY" : "$ USD"}
-                </button>
-              ))}
-            </div>
+    <Modal
+      open={true}
+      onClose={onClose}
+      title={mode === "add" ? "Add Transaction" : "Edit Transaction"}
+      size="sm"
+      footer={
+        <>
+          <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving..." : "Save"}
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Wallet */}
+        <div>
+          <label style={LABEL_STYLE}>Wallet</label>
+          <div style={{ display: "flex", gap: 2, background: "var(--bg-1)", border: "1px solid var(--line-soft)", borderRadius: "var(--r-2)", padding: 3 }}>
+            {(["TRY", "USD"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => field("currency", c)}
+                style={{
+                  flex: 1, padding: "5px 12px", borderRadius: "var(--r-1)", fontSize: 12, fontWeight: 500,
+                  border: "none", cursor: "pointer", transition: "all 80ms", fontFamily: "inherit",
+                  background: form.currency === c ? "var(--bg-3)" : "transparent",
+                  color: form.currency === c ? "var(--fg)" : "var(--fg-4)",
+                }}
+              >
+                {c === "TRY" ? "₺ TRY" : "$ USD"}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Type */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Type</label>
-            <div className="flex gap-2">
-              {(["income", "expense"] as TransactionType[]).map((t) => (
+        {/* Type */}
+        <div>
+          <label style={LABEL_STYLE}>Type</label>
+          <div style={{ display: "flex", gap: 2, background: "var(--bg-1)", border: "1px solid var(--line-soft)", borderRadius: "var(--r-2)", padding: 3 }}>
+            {(["income", "expense"] as TransactionType[]).map((t) => {
+              const active = form.type === t;
+              const isIncome = t === "income";
+              return (
                 <button
                   key={t}
                   onClick={() => field("type", t)}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors capitalize",
-                    form.type === t
-                      ? t === "income"
-                        ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                        : "bg-red-500/15 text-red-400 border border-red-500/25"
-                      : "bg-white/5 text-white/40 border border-white/5 hover:bg-white/[0.08]"
-                  )}
+                  style={{
+                    flex: 1, padding: "5px 12px", borderRadius: "var(--r-1)", fontSize: 12, fontWeight: 500,
+                    border: "none", cursor: "pointer", transition: "all 80ms", fontFamily: "inherit",
+                    textTransform: "capitalize",
+                    background: active ? (isIncome ? "var(--success-bg)" : "var(--danger-bg)") : "transparent",
+                    color: active ? (isIncome ? "var(--success)" : "var(--danger)") : "var(--fg-4)",
+                  }}
                 >
                   {t}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Description <span className="text-white/25">(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={form.description}
-              onChange={(e) => field("description", e.target.value)}
-              placeholder="e.g. Grocery shopping"
-              className="w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50 transition-colors"
-            />
-          </div>
+        {/* Description */}
+        <div>
+          <label style={LABEL_STYLE}>
+            Description <span style={{ color: "var(--fg-5)", textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={form.description}
+            onChange={(e) => field("description", e.target.value)}
+            placeholder="e.g. Grocery shopping"
+            style={{ width: "100%" }}
+          />
+        </div>
 
-          {/* Amount */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Amount ({form.currency === "USD" ? "$" : "₺"})
-            </label>
-            <input
-              type="number"
-              value={form.amount}
-              onChange={(e) => field("amount", e.target.value)}
-              placeholder="0.00"
-              min="0"
-              className={cn(
-                "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors font-mono",
-                errors.amount
-                  ? "border-red-500/40 focus:border-red-500/60"
-                  : "border-white/[0.08] focus:border-violet-500/50"
-              )}
-            />
-            {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount}</p>}
-          </div>
+        {/* Amount */}
+        <div>
+          <label style={LABEL_STYLE}>Amount ({form.currency === "USD" ? "$" : "₺"})</label>
+          <input
+            type="number"
+            value={form.amount}
+            onChange={(e) => field("amount", e.target.value)}
+            placeholder="0.00"
+            min="0"
+            style={{ width: "100%", ...(errors.amount ? { borderColor: "var(--danger)" } : {}) }}
+          />
+          {errors.amount && <p style={{ fontSize: 11, color: "var(--danger)", marginTop: 3 }}>{errors.amount}</p>}
+        </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">
-              Category <span className="text-white/25">(optional)</span>
-            </label>
-            <SelectPrimitive.Root
-              value={form.category_id}
-              onValueChange={(val) => field("category_id", val)}
+        {/* Category */}
+        <div>
+          <label style={LABEL_STYLE}>
+            Category <span style={{ color: "var(--fg-5)", textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>(optional)</span>
+          </label>
+          <SelectPrimitive.Root value={form.category_id} onValueChange={(val) => field("category_id", val)}>
+            <SelectPrimitive.Trigger
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "oklch(1 0 0 / 0.04)", border: "1px solid var(--line)", borderRadius: "var(--r-2)",
+                padding: "6px 9px", fontSize: 12.5, color: "var(--fg)", outline: "none",
+                cursor: "pointer", fontFamily: "inherit", transition: "border-color 80ms",
+              }}
             >
-              <SelectPrimitive.Trigger className="w-full flex items-center justify-between bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 transition-colors data-[placeholder]:text-white/20">
-                <SelectPrimitive.Value placeholder="Uncategorized" />
-                <SelectPrimitive.Icon>
-                  <ChevronDown size={14} className="text-white/30" />
-                </SelectPrimitive.Icon>
-              </SelectPrimitive.Trigger>
-              <SelectPrimitive.Portal>
-                <SelectPrimitive.Content
-                  position="popper"
-                  sideOffset={4}
-                  className="z-50 w-[var(--radix-select-trigger-width)] bg-[#141422] border border-white/10 rounded-lg shadow-xl overflow-hidden"
-                >
-                  <SelectPrimitive.Viewport className="p-1">
-                    <SelectPrimitive.Item
-                      value="none"
-                      className="flex items-center px-3 py-2 text-sm text-white/40 rounded-md cursor-pointer outline-none hover:bg-white/5 hover:text-white/70 transition-colors data-[highlighted]:bg-white/5 data-[highlighted]:text-white/70"
-                    >
-                      <SelectPrimitive.ItemText>Uncategorized</SelectPrimitive.ItemText>
-                    </SelectPrimitive.Item>
-                    {categories.length > 0 && <div className="my-1 h-px bg-white/5" />}
-                    {categories.map((c) => (
-                      <SelectPrimitive.Item
-                        key={c.id}
-                        value={String(c.id)}
-                        className="flex items-center px-3 py-2 text-sm text-white rounded-md cursor-pointer outline-none hover:bg-white/5 transition-colors data-[highlighted]:bg-white/5 data-[state=checked]:text-violet-400"
-                      >
-                        <SelectPrimitive.ItemText>{c.name}</SelectPrimitive.ItemText>
-                      </SelectPrimitive.Item>
-                    ))}
-                  </SelectPrimitive.Viewport>
-                </SelectPrimitive.Content>
-              </SelectPrimitive.Portal>
-            </SelectPrimitive.Root>
-          </div>
-
-          {/* Date */}
-          <div>
-            <label className="block text-xs font-medium text-white/50 mb-1.5">Date</label>
-            <PopoverPrimitive.Root
-              open={datePickerOpen}
-              onOpenChange={(open) => { setDatePickerOpen(open); if (!open) setPickerView("day"); }}
-            >
-              <PopoverPrimitive.Trigger
-                className={cn(
-                  "w-full flex items-center justify-between bg-white/5 border rounded-lg px-3 py-2 text-sm outline-none transition-colors",
-                  errors.date
-                    ? "border-red-500/40 text-red-400"
-                    : "border-white/[0.08] text-white hover:border-white/20"
-                )}
+              <SelectPrimitive.Value placeholder={<span style={{ color: "var(--fg-5)" }}>Uncategorized</span>} />
+              <SelectPrimitive.Icon>
+                <ChevronDown size={14} style={{ color: "var(--fg-4)" }} />
+              </SelectPrimitive.Icon>
+            </SelectPrimitive.Trigger>
+            <SelectPrimitive.Portal>
+              <SelectPrimitive.Content
+                position="popper"
+                sideOffset={4}
+                style={{
+                  zIndex: 100, width: "var(--radix-select-trigger-width)",
+                  background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: "var(--r-2)",
+                  boxShadow: "0 8px 32px oklch(0 0 0 / 0.4)", overflow: "hidden",
+                }}
               >
-                <span className={form.date ? "text-white" : "text-white/20"}>
-                  {form.date
-                    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(form.date + "T12:00:00"))
-                    : "Pick a date"}
-                </span>
-                <CalendarIcon size={14} className="text-white/30" />
-              </PopoverPrimitive.Trigger>
-              <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                  sideOffset={4}
-                  className="z-50 bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <button
-                      onClick={() => {
-                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                        if (pickerView === "day") d.setMonth(d.getMonth() - 1);
-                        else d.setFullYear(d.getFullYear() - 1);
-                        field("date", d.toISOString().split("T")[0]);
-                      }}
-                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+                <SelectPrimitive.Viewport style={{ padding: 4 }}>
+                  <SelectPrimitive.Item
+                    value="none"
+                    style={{ display: "flex", alignItems: "center", padding: "6px 10px", fontSize: 12.5, color: "var(--fg-4)", borderRadius: "var(--r-1)", cursor: "pointer", outline: "none", userSelect: "none" }}
+                    onFocus={(e) => (e.currentTarget.style.background = "var(--bg-3)")}
+                    onBlur={(e) => (e.currentTarget.style.background = "")}
+                  >
+                    <SelectPrimitive.ItemText>Uncategorized</SelectPrimitive.ItemText>
+                  </SelectPrimitive.Item>
+                  {allCategories.length > 0 && <div style={{ margin: "2px 0", height: 1, background: "var(--line)" }} />}
+                  {allCategories.map((c) => (
+                    <SelectPrimitive.Item
+                      key={c.id}
+                      value={String(c.id)}
+                      style={{ display: "flex", alignItems: "center", padding: "6px 10px", fontSize: 12.5, color: "var(--fg-2)", borderRadius: "var(--r-1)", cursor: "pointer", outline: "none", userSelect: "none" }}
+                      onFocus={(e) => (e.currentTarget.style.background = "var(--bg-3)")}
+                      onBlur={(e) => (e.currentTarget.style.background = "")}
                     >
-                      ‹
-                    </button>
-                    {pickerView === "year" ? (
-                      <span className="text-sm font-medium text-white px-2 py-1">
-                        {`${pickerYear - 6} – ${pickerYear + 5}`}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setPickerView((v) => v === "day" ? "month" : "year")}
-                        className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
-                      >
-                        {pickerView === "day"
-                          ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(currentPickerDate)
-                          : pickerYear}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                        if (pickerView === "day") d.setMonth(d.getMonth() + 1);
-                        else d.setFullYear(d.getFullYear() + 1);
-                        field("date", d.toISOString().split("T")[0]);
-                      }}
-                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
-                    >
-                      ›
-                    </button>
-                  </div>
+                      <SelectPrimitive.ItemText>{c.name}</SelectPrimitive.ItemText>
+                    </SelectPrimitive.Item>
+                  ))}
+                </SelectPrimitive.Viewport>
+              </SelectPrimitive.Content>
+            </SelectPrimitive.Portal>
+          </SelectPrimitive.Root>
+        </div>
 
+        {/* Date */}
+        <div>
+          <label style={LABEL_STYLE}>Date</label>
+          <PopoverPrimitive.Root
+            open={datePickerOpen}
+            onOpenChange={(open) => { setDatePickerOpen(open); if (!open) setPickerView("day"); }}
+          >
+            <PopoverPrimitive.Trigger
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "oklch(1 0 0 / 0.04)",
+                border: `1px solid ${errors.date ? "var(--danger)" : "var(--line)"}`,
+                borderRadius: "var(--r-2)", padding: "6px 9px", fontSize: 12.5,
+                color: errors.date ? "var(--danger)" : "var(--fg)", outline: "none",
+                cursor: "pointer", fontFamily: "inherit", transition: "border-color 80ms",
+              }}
+            >
+              <span style={{ color: form.date ? "var(--fg)" : "var(--fg-5)" }}>
+                {form.date
+                  ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(form.date + "T12:00:00"))
+                  : "Pick a date"}
+              </span>
+              <CalendarIcon size={14} style={{ color: "var(--fg-4)" }} />
+            </PopoverPrimitive.Trigger>
+            <PopoverPrimitive.Portal>
+              <PopoverPrimitive.Content
+                sideOffset={4}
+                style={{
+                  zIndex: 100, background: "var(--bg-2)", border: "1px solid var(--line)",
+                  borderRadius: "var(--r-3)", padding: 12,
+                  boxShadow: "0 12px 40px oklch(0 0 0 / 0.4)",
+                }}
+              >
+                {/* Nav header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <button
+                    className="btn-icon"
+                    onClick={() => {
+                      const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                      if (pickerView === "day") d.setMonth(d.getMonth() - 1);
+                      else d.setFullYear(d.getFullYear() - 1);
+                      field("date", d.toISOString().split("T")[0]);
+                    }}
+                    style={{ fontSize: 18 }}
+                  >
+                    ‹
+                  </button>
                   {pickerView === "year" ? (
-                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const year = pickerYear - 6 + i;
-                        const isSelected = pickerYear === year;
-                        return (
-                          <button
-                            key={year}
-                            onClick={() => {
-                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                              d.setFullYear(year);
-                              field("date", d.toISOString().split("T")[0]);
-                              setPickerView("month");
-                            }}
-                            className={cn(
-                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
-                              isSelected
-                                ? "bg-violet-500/30 text-violet-300"
-                                : "text-white/60 hover:bg-white/5 hover:text-white"
-                            )}
-                          >
-                            {year}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : pickerView === "month" ? (
-                    <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const label = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
-                        const isSelected = currentPickerDate.getMonth() === i;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
-                              d.setMonth(i);
-                              field("date", d.toISOString().split("T")[0]);
-                              setPickerView("day");
-                            }}
-                            className={cn(
-                              "flex items-center justify-center rounded-lg text-sm font-medium transition-colors",
-                              isSelected
-                                ? "bg-violet-500/30 text-violet-300"
-                                : "text-white/60 hover:bg-white/5 hover:text-white"
-                            )}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-2)", padding: "3px 8px" }}>
+                      {`${pickerYear - 6} – ${pickerYear + 5}`}
+                    </span>
                   ) : (
-                    <>
-                      <DayPicker
-                        mode="single"
-                        month={currentPickerDate}
-                        hideNavigation
-                        selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
-                        onSelect={(day) => {
-                          if (day) {
-                            const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
-                            field("date", local.toISOString().split("T")[0]);
-                            setDatePickerOpen(false);
-                          }
-                        }}
-                        classNames={DAY_PICKER_CLASS_NAMES}
-                      />
-                      <button
-                        onClick={() => field("date", new Date().toISOString().split("T")[0])}
-                        className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
-                      >
-                        Today
-                      </button>
-                    </>
+                    <button
+                      onClick={() => setPickerView((v) => v === "day" ? "month" : "year")}
+                      className="btn-ghost btn"
+                      style={{ fontSize: 13, padding: "3px 8px", height: "auto" }}
+                    >
+                      {pickerView === "day"
+                        ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(currentPickerDate)
+                        : pickerYear}
+                    </button>
                   )}
-                </PopoverPrimitive.Content>
-              </PopoverPrimitive.Portal>
-            </PopoverPrimitive.Root>
-            {errors.date && <p className="text-xs text-red-400 mt-1">{errors.date}</p>}
-          </div>
+                  <button
+                    className="btn-icon"
+                    onClick={() => {
+                      const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                      if (pickerView === "day") d.setMonth(d.getMonth() + 1);
+                      else d.setFullYear(d.getFullYear() + 1);
+                      field("date", d.toISOString().split("T")[0]);
+                    }}
+                    style={{ fontSize: 18 }}
+                  >
+                    ›
+                  </button>
+                </div>
+
+                {pickerView === "year" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(4, 1fr)", height: 192, width: 224 }}>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const year = pickerYear - 6 + i;
+                      const isSelected = pickerYear === year;
+                      return (
+                        <button
+                          key={year}
+                          onClick={() => {
+                            const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                            d.setFullYear(year);
+                            field("date", d.toISOString().split("T")[0]);
+                            setPickerView("month");
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: "var(--r-2)", fontSize: 13, fontWeight: 500,
+                            border: "none", cursor: "pointer", fontFamily: "inherit", transition: "80ms",
+                            background: isSelected ? "var(--accent-bg)" : "transparent",
+                            color: isSelected ? "var(--accent)" : "var(--fg-3)",
+                          }}
+                        >
+                          {year}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : pickerView === "month" ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridTemplateRows: "repeat(4, 1fr)", height: 192, width: 224 }}>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const label = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
+                      const isSelected = currentPickerDate.getMonth() === i;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            const d = new Date(form.date ? form.date + "T12:00:00" : Date.now());
+                            d.setMonth(i);
+                            field("date", d.toISOString().split("T")[0]);
+                            setPickerView("day");
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: "var(--r-2)", fontSize: 13, fontWeight: 500,
+                            border: "none", cursor: "pointer", fontFamily: "inherit", transition: "80ms",
+                            background: isSelected ? "var(--accent-bg)" : "transparent",
+                            color: isSelected ? "var(--accent)" : "var(--fg-3)",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <>
+                    <DayPicker
+                      mode="single"
+                      month={currentPickerDate}
+                      hideNavigation
+                      selected={form.date ? new Date(form.date + "T12:00:00") : undefined}
+                      onSelect={(day) => {
+                        if (day) {
+                          const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
+                          field("date", local.toISOString().split("T")[0]);
+                          setDatePickerOpen(false);
+                        }
+                      }}
+                      classNames={DAY_PICKER_CLASS_NAMES}
+                    />
+                    <button
+                      onClick={() => field("date", new Date().toISOString().split("T")[0])}
+                      style={{
+                        marginTop: 6, width: "100%", padding: "5px 0", borderRadius: "var(--r-2)",
+                        fontSize: 12, color: "var(--fg-5)", background: "none", border: "none",
+                        cursor: "pointer", fontFamily: "inherit", transition: "80ms",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--fg-3)"; e.currentTarget.style.background = "var(--bg-3)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--fg-5)"; e.currentTarget.style.background = "none"; }}
+                    >
+                      Today
+                    </button>
+                  </>
+                )}
+              </PopoverPrimitive.Content>
+            </PopoverPrimitive.Portal>
+          </PopoverPrimitive.Root>
+          {errors.date && <p style={{ fontSize: 11, color: "var(--danger)", marginTop: 3 }}>{errors.date}</p>}
         </div>
 
         {submitError && <ErrorBanner message={submitError} />}
-
-        <div className="flex gap-2 mt-6">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Save"}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

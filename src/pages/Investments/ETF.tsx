@@ -7,11 +7,14 @@ import { logError } from "../../lib/logger";
 import { formatCurrency } from "../../lib/formatters";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
 import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
-import { cn } from "../../lib/utils";
+import { PageHeader } from "../../components/ui/primitives";
 
 function currencySymbol(currency: string) {
   return currency === "USD" ? "$" : "₺";
 }
+
+const COLS = "1fr 70px 80px 120px 120px 120px 120px 100px";
+const CLOSED_COLS = "1fr 70px 160px";
 
 export function ETF() {
   const { assets, holdings, latestPrices, investmentTransactions, addInvestmentTransaction, refreshHolding } = useInvestmentStore();
@@ -27,12 +30,8 @@ export function ETF() {
 
   const closedRows = closedEtfAssets.map((asset) => {
     const holding = holdings.find((h) => h.asset_id === asset.id);
-    const totalIncome = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
-    const totalInvested = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "BUY")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalIncome = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalInvested = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "BUY").reduce((sum, t) => sum + t.quantity * t.price, 0);
     const realizedPnl = (holding?.realized_pnl ?? 0) + totalIncome;
     const realizedPnlPct = totalInvested > 0 ? (realizedPnl / totalInvested) * 100 : null;
     return { asset, realizedPnl, realizedPnlPct };
@@ -44,25 +43,15 @@ export function ETF() {
     const sym = currencySymbol(asset.currency);
     const currentValue = latestPrice !== null && holding ? latestPrice * holding.quantity : null;
     const costBasis = holding ? holding.average_cost * holding.quantity : null;
-    const totalIncome = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalIncome = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
     const realizedPnl = holding?.realized_pnl ?? 0;
     const extraPnl = totalIncome + realizedPnl;
-    const pnl = currentValue !== null && costBasis !== null
-      ? (currentValue - costBasis) + extraPnl
-      : extraPnl !== 0 ? extraPnl : null;
+    const pnl = currentValue !== null && costBasis !== null ? (currentValue - costBasis) + extraPnl : extraPnl !== 0 ? extraPnl : null;
     const pnlPct = pnl !== null && costBasis ? (pnl / costBasis) * 100 : null;
     return { asset, holding, latestPrice, sym, currentValue, pnl, pnlPct };
   });
 
-  async function handleAddIncome(data: {
-    asset_id: number;
-    transaction_type: "INCOME";
-    quantity: number;
-    price: number;
-    date: string;
-  }): Promise<string | undefined> {
+  async function handleAddIncome(data: { asset_id: number; transaction_type: "INCOME"; quantity: number; price: number; date: string }): Promise<string | undefined> {
     setMutating(true);
     try {
       const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
@@ -77,19 +66,10 @@ export function ETF() {
     }
   }
 
-  async function handleAddTransaction(data: {
-    asset_id: number;
-    transaction_type: "BUY" | "SELL";
-    quantity: number;
-    price: number;
-    date: string;
-  }): Promise<string | undefined> {
+  async function handleAddTransaction(data: { asset_id: number; transaction_type: "BUY" | "SELL"; quantity: number; price: number; date: string }): Promise<string | undefined> {
     setMutating(true);
     try {
-      const txn = await investmentTransactionsApi.create({
-        ...data,
-        date: new Date(data.date).toISOString(),
-      });
+      const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
       addInvestmentTransaction(txn);
       const updatedHolding = await holdingsApi.get(data.asset_id);
       refreshHolding(updatedHolding);
@@ -103,83 +83,64 @@ export function ETF() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">ETFs</h1>
-          <p className="text-sm text-white/40 mt-0.5">{etfAssets.length} assets</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          New Transaction
-        </button>
-      </div>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title="ETFs"
+        meta={`${etfAssets.length} assets`}
+        actions={
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> New Transaction
+          </button>
+        }
+      />
 
-      <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-[1fr_80px_80px_120px_120px_120px_120px_100px] px-5 py-3 border-b border-white/5 shrink-0">
+      <div className="surface" style={{ flex: 1, overflow: "hidden" }}>
+        <div className="table-head" style={{ gridTemplateColumns: COLS }}>
           {["Asset", "CCY", "Qty", "Avg Cost", "Price", "Value", "P&L", ""].map((col) => (
-            <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
-              {col}
-            </span>
+            <span key={col}>{col}</span>
           ))}
         </div>
-
         {rows.length === 0 ? (
-          <div className="flex items-center justify-center flex-1">
-            <p className="text-sm text-white/20">No ETFs found</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 20px" }}>
+            <p style={{ fontSize: 13, color: "var(--fg-5)" }}>No ETFs found</p>
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1">
-            {rows.map(({ asset, holding, latestPrice, sym, currentValue, pnl, pnlPct }) => (
-              <div
-                key={asset.id}
-                className="grid grid-cols-[1fr_80px_80px_120px_120px_120px_120px_100px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
-              >
-                <div>
-                  <p className="text-sm font-medium text-white">{asset.name}</p>
-                  <p className="text-xs text-white/30 mt-0.5">{asset.symbol}</p>
-                </div>
-                <span className="text-xs text-white/40 font-mono">{asset.currency}</span>
-                <span className="text-sm text-white/70 font-mono">
-                  {holding ? holding.quantity.toFixed(2) : "—"}
-                </span>
-                <span className="text-sm text-white/70 font-mono">
-                  {holding ? `${sym}${formatCurrency(holding.average_cost)}` : "—"}
-                </span>
-                <span className="text-sm text-white font-mono">
-                  {latestPrice !== null ? `${sym}${formatCurrency(latestPrice)}` : "—"}
-                </span>
-                <span className="text-sm text-white font-mono">
-                  {currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}
-                </span>
-                <div>
-                  {pnl !== null ? (
-                    <>
-                      <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                        {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
-                      </p>
-                      <p className={cn("text-xs font-mono mt-0.5", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
-                        {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
-                      </p>
-                    </>
-                  ) : (
-                    <span className="text-sm text-white/20">—</span>
-                  )}
-                </div>
-                <div>
-                  <button
-                    onClick={() => { setPrefillIncome({ assetId: asset.id, quantity: holding?.quantity ?? 0 }); setShowIncomeModal(true); }}
-                    className="text-xs px-2 py-1 rounded-md font-medium bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors"
-                  >
-                    Record Income
-                  </button>
-                </div>
+          rows.map(({ asset, holding, latestPrice, sym, currentValue, pnl, pnlPct }) => (
+            <div key={asset.id} className="table-row" style={{ gridTemplateColumns: COLS }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+            >
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{asset.name}</p>
+                <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{asset.symbol}</p>
               </div>
-            ))}
-          </div>
+              <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{asset.currency}</span>
+              <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{holding ? holding.quantity.toFixed(2) : "—"}</span>
+              <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{holding ? `${sym}${formatCurrency(holding.average_cost)}` : "—"}</span>
+              <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>{latestPrice !== null ? `${sym}${formatCurrency(latestPrice)}` : "—"}</span>
+              <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>{currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}</span>
+              <div>
+                {pnl !== null ? (
+                  <>
+                    <p className="num" style={{ fontSize: 13, fontWeight: 500, color: pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
+                      {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
+                    </p>
+                    <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
+                      {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
+                    </p>
+                  </>
+                ) : <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>}
+              </div>
+              <div>
+                <button
+                  onClick={() => { setPrefillIncome({ assetId: asset.id, quantity: holding?.quantity ?? 0 }); setShowIncomeModal(true); }}
+                  style={{ fontSize: 11, padding: "3px 8px", borderRadius: "var(--r-1)", fontWeight: 500, border: "none", cursor: "pointer", background: "var(--warning-bg)", color: "var(--warning)" }}
+                >
+                  Record Income
+                </button>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
@@ -187,33 +148,31 @@ export function ETF() {
         <div>
           <button
             onClick={() => setShowClosed((p) => !p)}
-            className="flex items-center gap-2 text-sm text-white/30 hover:text-white/50 transition-colors"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
-            <ChevronDown size={14} className={cn("transition-transform", showClosed && "rotate-180")} />
+            <ChevronDown size={14} style={{ transform: showClosed ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
             Closed Positions ({closedRows.length})
           </button>
           {showClosed && (
-            <div className="mt-2 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[1fr_80px_160px] px-5 py-3 border-b border-white/5">
-                {["Asset", "CCY", "Realized P&L"].map((col) => (
-                  <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
-                ))}
+            <div className="surface" style={{ overflow: "hidden", marginTop: 8 }}>
+              <div className="table-head" style={{ gridTemplateColumns: CLOSED_COLS }}>
+                {["Asset", "CCY", "Realized P&L"].map((col) => <span key={col}>{col}</span>)}
               </div>
               {closedRows.map(({ asset, realizedPnl, realizedPnlPct }) => {
                 const sym = currencySymbol(asset.currency);
                 return (
-                  <div key={asset.id} className="grid grid-cols-[1fr_80px_160px] px-5 py-4 border-b border-white/5 last:border-0 items-center">
+                  <div key={asset.id} className="table-row" style={{ gridTemplateColumns: CLOSED_COLS }}>
                     <div>
-                      <p className="text-sm font-medium text-white/50">{asset.name}</p>
-                      <p className="text-xs text-white/20 mt-0.5">{asset.symbol}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-3)" }}>{asset.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--fg-5)", marginTop: 1 }}>{asset.symbol}</p>
                     </div>
-                    <span className="text-xs text-white/30 font-mono">{asset.currency}</span>
+                    <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{asset.currency}</span>
                     <div>
-                      <p className={cn("text-sm font-mono font-medium", realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                      <p className="num" style={{ fontSize: 13, fontWeight: 500, color: realizedPnl >= 0 ? "var(--success)" : "var(--danger)" }}>
                         {realizedPnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(realizedPnl))}
                       </p>
                       {realizedPnlPct !== null && (
-                        <p className={cn("text-xs font-mono mt-0.5", realizedPnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                        <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: realizedPnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                           {realizedPnl >= 0 ? "+" : ""}{realizedPnlPct.toFixed(2)}%
                         </p>
                       )}
@@ -227,23 +186,11 @@ export function ETF() {
       )}
 
       {showModal && (
-        <TransactionModal
-          mode="add"
-          assets={allEtfAssets}
-          holdings={holdings}
-          onSubmit={handleAddTransaction}
-          onClose={() => setShowModal(false)}
-          loading={mutating}
-        />
+        <TransactionModal mode="add" assets={allEtfAssets} holdings={holdings} onSubmit={handleAddTransaction} onClose={() => setShowModal(false)} loading={mutating} />
       )}
-
       {showIncomeModal && (
-        <IncomeTransactionModal
-          onSubmit={handleAddIncome}
-          onClose={() => { setShowIncomeModal(false); setPrefillIncome(null); }}
-          loading={mutating}
-          prefillAssetId={prefillIncome?.assetId}
-          prefillQuantity={prefillIncome?.quantity}
+        <IncomeTransactionModal onSubmit={handleAddIncome} onClose={() => { setShowIncomeModal(false); setPrefillIncome(null); }} loading={mutating}
+          prefillAssetId={prefillIncome?.assetId} prefillQuantity={prefillIncome?.quantity}
         />
       )}
     </div>

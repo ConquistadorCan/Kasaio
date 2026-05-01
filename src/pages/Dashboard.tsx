@@ -8,6 +8,7 @@ import {
 import { useAppStore } from "../store/useAppStore";
 import { useInvestmentStore } from "../store/useInvestmentStore";
 import { useBESStore } from "../store/useBESStore";
+import { useUIStore } from "../store/useUIStore";
 import { formatCurrency, formatDateShort } from "../lib/formatters";
 import type { TransactionType } from "../types";
 import { cn } from "../lib/utils";
@@ -113,7 +114,7 @@ export function Dashboard() {
   const { transactions, categories } = useAppStore();
   const { assets, holdings, latestPrices, investmentTransactions } = useInvestmentStore();
   const { plans: besPlans } = useBESStore();
-  const [walletView, setWalletView] = useState<WalletView>("TRY");
+  const walletView = useUIStore((s) => s.walletView) as WalletView;
   const [allocationView, setAllocationView] = useState<AllocationView>("TRY");
   const [usdRate, setUsdRate] = useState<number>(38);
   const [usdRateInput, setUsdRateInput] = useState<string>("38");
@@ -306,330 +307,327 @@ export function Dashboard() {
     [walletInvestmentTxns]
   );
 
-  const TYPE_COLORS: Record<TransactionType, string> = { income: "#34d399", expense: "#f87171" };
-
   return (
-    <div className="flex flex-col gap-5 h-full overflow-y-auto pb-6">
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 24 }}>
 
-      {/* ── Wallet toggle ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Dashboard</h1>
-        </div>
-        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
-          {(["TRY", "USD"] as WalletView[]).map((w) => (
-            <button
-              key={w}
-              onClick={() => setWalletView(w)}
-              className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-                walletView === w ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-              )}
-            >
-              {w === "TRY" ? "₺ TRY" : "$ USD"}
-            </button>
-          ))}
-        </div>
+      {/* ── Overview KPIs ── */}
+
+      {/* KPI row */}
+      <div className="surface" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
+        {[
+          { label: "Cash Balance",  value: `${sym}${formatCurrency(netBalance)}`,   tone: netBalance >= 0 ? "pos" : "neg" },
+          { label: "Portfolio",     value: `${sym}${formatCurrency(portfolioValue)}`, hint: `${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`, hintTone: portfolioPnl >= 0 ? "pos" : "neg" },
+          { label: "Total Assets",  value: `${sym}${formatCurrency(walletTotal)}`,    tone: "" },
+        ].map((k, i) => (
+          <div key={i} style={{ padding: "14px 16px", borderRight: i < 2 ? "1px solid var(--line)" : "none" }}>
+            <span className="mono" style={{ fontSize: 10, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{k.label}</span>
+            <div className="num" style={{ fontSize: 22, fontWeight: 600, marginTop: 4, color: k.tone === "pos" ? "var(--success)" : k.tone === "neg" ? "var(--danger)" : "var(--fg)" }}>
+              {k.value}
+            </div>
+            {k.hint && (
+              <span className={`pill pill-sm ${k.hintTone === "pos" ? "pos-bg" : "neg-bg"}`} style={{ marginTop: 4 }}>{k.hint}</span>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* ── Section 1: Overview ── */}
-      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Wallet size={18} className="text-violet-400" />
-          <p className="text-base font-semibold text-white">Overview</p>
-        </div>
-        <div className="flex gap-4">
-          <StatCard label="Cash Balance" value={formatCurrency(netBalance)} symbol={sym} icon={<Wallet size={15} />} variant="neutral" />
-          <StatCard
-            label="Portfolio"
-            value={formatCurrency(portfolioValue)}
-            symbol={sym}
-            sub={`${portfolioPnl >= 0 ? "+" : ""}${portfolioPnlPct.toFixed(2)}%`}
-            subColor={portfolioPnl >= 0 ? "text-emerald-400" : "text-red-400"}
-            icon={<BarChart2 size={15} />}
-            variant="violet"
-          />
-          <StatCard label="Total" value={formatCurrency(walletTotal)} symbol={sym} icon={<Wallet size={15} />} variant="neutral" />
-        </div>
-      </div>
+      {/* Cash flow: income / expense + monthly bars + category breakdown */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 14 }}>
 
-      {/* ── Section 2: Cash Flow ── */}
-      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 size={18} className="text-violet-400" />
-          <p className="text-base font-semibold text-white">Cash Flow</p>
-        </div>
-        <div className="flex gap-4 mb-4">
-          <StatCard label="Total Income" value={formatCurrency(totalIncome)} symbol={sym} icon={<TrendingUp size={15} />} variant="income" />
-          <StatCard label="Total Expenses" value={formatCurrency(totalExpense)} symbol={sym} icon={<TrendingDown size={15} />} variant="expense" />
-        </div>
-
-        <div className="grid grid-cols-[1fr_220px] gap-4">
-          {/* Bar chart */}
-          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-medium text-white mb-1">Income vs Expenses</p>
-            <p className="text-xs text-white/30 mb-4">Last 6 months · {walletView} wallet</p>
+        {/* Monthly bars panel */}
+        <div className="surface">
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 14px", borderBottom: "1px solid var(--line)",
+          }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span className="mono" style={{ fontSize: 10, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>TREND</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Last 6 months</span>
+            </div>
+            <div style={{ display: "flex", gap: 10, fontSize: 11, color: "var(--fg-3)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="dot" style={{ background: "var(--success)" }}/>Income</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="dot" style={{ background: "var(--danger)" }}/>Expense</span>
+            </div>
+          </div>
+          <div style={{ padding: 16 }}>
             {walletTxns.length === 0 ? (
-              <div className="flex items-center justify-center h-36"><p className="text-sm text-white/20">No data yet</p></div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 100 }}>
+                <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No {walletView} transactions yet</p>
+              </div>
             ) : (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={monthlyData} barSize={10} barGap={3}>
-                  <XAxis dataKey="label" tick={{ fill: "rgba(240,240,250,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <ResponsiveContainer width="100%" height={132}>
+                <BarChart data={monthlyData} barSize={9} barGap={3}>
+                  <XAxis dataKey="label" tick={{ fill: "var(--fg-4)", fontSize: 10, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} />
                   <YAxis hide />
-                  <Tooltip content={<CustomTooltip symbol={sym} />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                  <Bar dataKey="income" radius={[4, 4, 0, 0]}>
-                    {monthlyData.map((_, i) => <Cell key={i} fill="#34d399" opacity={0.8} />)}
+                  <Tooltip content={<CustomTooltip symbol={sym} />} cursor={{ fill: "oklch(1 0 0 / 0.03)" }} />
+                  <Bar dataKey="income" radius={[3, 3, 0, 0]}>
+                    {monthlyData.map((_, i) => <Cell key={i} fill="var(--success)" opacity={0.9} />)}
                   </Bar>
-                  <Bar dataKey="expense" radius={[4, 4, 0, 0]}>
-                    {monthlyData.map((_, i) => <Cell key={i} fill="#f87171" opacity={0.8} />)}
+                  <Bar dataKey="expense" radius={[3, 3, 0, 0]}>
+                    {monthlyData.map((_, i) => <Cell key={i} fill="var(--danger)" opacity={0.9} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
+          {/* Income / Expense totals */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid var(--line)" }}>
+            {[
+              { label: "Income", value: `+${sym}${formatCurrency(totalIncome)}`, color: "var(--success)" },
+              { label: "Expenses", value: `−${sym}${formatCurrency(totalExpense)}`, color: "var(--danger)" },
+            ].map((s, i) => (
+              <div key={i} style={{ padding: "10px 14px", borderRight: i === 0 ? "1px solid var(--line)" : "none" }}>
+                <span className="mono" style={{ fontSize: 9.5, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</span>
+                <div className="num" style={{ fontSize: 16, fontWeight: 600, marginTop: 4, color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-          {/* Category breakdown */}
-          <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-            <p className="text-sm font-medium text-white mb-1">By Category</p>
-            <p className="text-xs text-white/30 mb-4">Expense breakdown</p>
+        {/* Category breakdown */}
+        <div className="surface">
+          <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
+            <span className="mono" style={{ fontSize: 10, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.08em" }}>By Category</span>
+          </div>
+          <div style={{ padding: "6px 0" }}>
             {categoryBreakdown.length === 0 ? (
-              <div className="flex items-center justify-center h-36">
-                <p className="text-xs text-white/20 text-center leading-relaxed">No categorized<br />expenses yet.</p>
+              <div style={{ padding: "20px 14px", textAlign: "center" }}>
+                <p style={{ fontSize: 12, color: "var(--fg-4)" }}>No categorized expenses</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {categoryBreakdown.map((cat) => (
-                  <div key={cat.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-white/60 truncate">{cat.name}</span>
-                      <span className="text-xs text-white/40 font-mono ml-2 shrink-0">{cat.percentage.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                      <div className="h-full bg-violet-500 rounded-full" style={{ width: `${cat.percentage}%` }} />
-                    </div>
+              categoryBreakdown.map((cat) => (
+                <div key={cat.name} style={{ padding: "6px 14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: "var(--fg-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cat.name}</span>
+                    <span className="num" style={{ fontSize: 10.5, color: "var(--fg-4)", flexShrink: 0, marginLeft: 4 }}>{cat.percentage.toFixed(0)}%</span>
                   </div>
-                ))}
-              </div>
+                  <div style={{ height: 3, background: "var(--bg-1)", borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{ width: `${cat.percentage}%`, height: "100%", background: "var(--accent)", opacity: 0.8 }} />
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
-
-        {/* Recent cash flow */}
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden mt-4">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-            <p className="text-sm font-medium text-white">Recent Transactions</p>
-            <button onClick={() => navigate("/cash-flow/transactions")} className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors">
-              View all <ArrowRight size={12} />
-            </button>
-          </div>
-          {recentCashFlow.length === 0 ? (
-            <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No transactions yet</p></div>
-          ) : (
-            recentCashFlow.map((t) => (
-              <div key={t.id} className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: TYPE_COLORS[t.type.toLowerCase() as TransactionType] }} />
-                  <div>
-                    <p className="text-sm text-white">{t.description ?? "—"}</p>
-                    <p className="text-xs text-white/30">{formatDateShort(t.date)}</p>
-                  </div>
-                </div>
-                <span className={cn("text-sm font-medium font-mono", t.type.toLowerCase() === "income" ? "text-emerald-400" : "text-red-400")}>
-                  {t.type.toLowerCase() === "income" ? "+" : "−"}{sym}{formatCurrency(t.amount)}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
       </div>
 
-      {/* ── Section 3: Portfolio ── */}
-      <div className="bg-[#141422] border border-white/5 rounded-xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={18} className="text-emerald-400" />
-          <p className="text-base font-semibold text-white">Portfolio · {walletView}</p>
+      {/* Recent cash flow */}
+      <div className="surface" style={{ overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Recent Transactions</span>
+          <button
+            onClick={() => navigate("/cash-flow/transactions")}
+            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--accent-2)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            View all <ArrowRight size={12} />
+          </button>
         </div>
+        {recentCashFlow.length === 0 ? (
+          <div style={{ padding: "24px", textAlign: "center" }}>
+            <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No transactions yet</p>
+          </div>
+        ) : (
+          recentCashFlow.map((t) => (
+            <div key={t.id} className="table-row" style={{ gridTemplateColumns: "1fr auto" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className="dot" style={{ background: t.type.toLowerCase() === "income" ? "var(--success)" : "var(--danger)" }} />
+                <div>
+                  <p style={{ fontSize: 12.5, color: "var(--fg)", margin: 0 }}>{t.description ?? "—"}</p>
+                  <p className="mono" style={{ fontSize: 10.5, color: "var(--fg-4)", margin: 0 }}>{formatDateShort(t.date)}</p>
+                </div>
+              </div>
+              <span className="num" style={{ fontSize: 12.5, fontWeight: 500, color: t.type.toLowerCase() === "income" ? "var(--success)" : "var(--danger)" }}>
+                {t.type.toLowerCase() === "income" ? "+" : "−"}{sym}{formatCurrency(t.amount)}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
 
-        {/* Allocation by type */}
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-white">Allocation</p>
-            <div className="flex gap-0.5 bg-white/5 p-0.5 rounded-md">
+      {/* Portfolio section */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+
+        {/* Allocation donut */}
+        <div className="surface">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Allocation</span>
+            <div style={{ display: "inline-flex", padding: 2, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 6, gap: 1 }}>
               {(["TRY", "USD", "Combined"] as AllocationView[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setAllocationView(v)}
-                  className={cn(
-                    "px-2.5 py-1 rounded text-xs font-medium transition-colors",
-                    allocationView === v ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
-                  )}
+                  style={{
+                    border: 0, cursor: "pointer",
+                    padding: "3px 8px", fontSize: 11, fontWeight: 500, borderRadius: 4,
+                    color: allocationView === v ? "var(--fg)" : "var(--fg-3)",
+                    background: allocationView === v ? "var(--bg-3)" : "transparent",
+                    transition: "80ms", fontFamily: "inherit",
+                  }}
                 >
                   {v === "TRY" ? "₺ TRY" : v === "USD" ? "$ USD" : "Combined"}
                 </button>
               ))}
             </div>
           </div>
-
-          {allocationView === "Combined" && (
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-white/40">Rate: 1 $ =</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={usdRateInput}
-                onChange={(e) => setUsdRateInput(e.target.value)}
-                onBlur={() => {
-                  const parsed = parseFloat(usdRateInput);
-                  if (!isNaN(parsed) && parsed > 0) { setUsdRate(parsed); setUsdRateInput(parsed.toString()); }
-                  else setUsdRateInput(usdRate.toString());
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const parsed = parseFloat(usdRateInput);
-                    if (!isNaN(parsed) && parsed > 0) { setUsdRate(parsed); setUsdRateInput(parsed.toString()); }
+          <div style={{ padding: 16 }}>
+            {allocationView === "Combined" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, fontSize: 12, color: "var(--fg-3)" }}>
+                <span>Rate: 1 $ =</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={usdRateInput}
+                  onChange={(e) => setUsdRateInput(e.target.value)}
+                  onBlur={() => {
+                    const p = parseFloat(usdRateInput);
+                    if (!isNaN(p) && p > 0) { setUsdRate(p); setUsdRateInput(p.toString()); }
                     else setUsdRateInput(usdRate.toString());
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                className="w-16 bg-white/5 border border-white/10 rounded px-2 py-0.5 text-xs text-white font-mono outline-none text-right"
-              />
-              <span className="text-xs text-white/40">₺</span>
-            </div>
-          )}
-
-          {activeAllocation.length === 0 ? (
-            <div className="flex items-center justify-center h-16"><p className="text-xs text-white/20">No positions</p></div>
-          ) : (
-            <div className="flex gap-5 items-center">
-              <div className="shrink-0">
-                <ResponsiveContainer width={110} height={110}>
+                  }}
+                  style={{ width: 56, textAlign: "right" }}
+                />
+                <span>₺</span>
+              </div>
+            )}
+            {activeAllocation.length === 0 ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 80 }}>
+                <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No positions</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                <ResponsiveContainer width={100} height={100}>
                   <PieChart>
-                    <Pie data={activeAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={50} strokeWidth={0}>
+                    <Pie data={activeAllocation} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={46} strokeWidth={0}>
                       {activeAllocation.map((s) => <Cell key={s.key} fill={s.color} opacity={0.9} />)}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
-              <div className="flex-1 flex flex-col gap-2">
-                {activeAllocation.map((s) => {
-                  const pct = allocationTotal > 0 ? (s.value / allocationTotal) * 100 : 0;
-                  return (
-                    <div key={s.key} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
-                      <span className="text-xs text-white/60 w-20 shrink-0">{s.name}</span>
-                      <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: s.color }} />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {activeAllocation.map((s) => {
+                    const pct = allocationTotal > 0 ? (s.value / allocationTotal) * 100 : 0;
+                    return (
+                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: s.color }} />
+                        <span style={{ fontSize: 11.5, color: "var(--fg-2)", width: 60, flexShrink: 0 }}>{s.name}</span>
+                        <div style={{ flex: 1, height: 3, background: "var(--bg-1)", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: s.color, borderRadius: 2 }} />
+                        </div>
+                        <span className="num" style={{ fontSize: 10.5, color: "var(--fg-4)", width: 34, textAlign: "right", flexShrink: 0 }}>{pct.toFixed(1)}%</span>
                       </div>
-                      <span className="text-xs text-white/50 font-mono w-10 text-right shrink-0">{pct.toFixed(1)}%</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Holdings table */}
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden mb-4">
-          <div className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5">
-              {["Asset", "Qty", "Value", "P&L"].map((col) => (
-                <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
-              ))}
-            </div>
-            {holdingRows.length === 0 && besRows.length === 0 ? (
-              <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No positions yet</p></div>
-            ) : (
-              <>
-                {holdingRows.map(({ asset, holding, currentValue, pnl, pnlPct }) => (
-                  <div key={holding.id} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
-                    <div>
-                      <p className="text-sm text-white">{asset?.name ?? "—"}</p>
-                      <p className="text-xs text-white/30">{asset?.symbol ?? "—"}</p>
-                    </div>
-                    <span className="text-sm text-white/60 font-mono">{holding.quantity.toFixed(2)}</span>
-                    <span className="text-sm text-white font-mono">
-                      {currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}
-                    </span>
-                    <div>
-                      {pnl !== null ? (
-                        <>
-                          <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                            {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
-                          </p>
-                          <p className={cn("text-xs font-mono", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
-                            {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-sm text-white/20">—</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {besRows.map((plan) => (
-                  <div key={`bes-${plan.id}`} className="grid grid-cols-[1fr_90px_100px_110px] px-5 py-3 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
-                    <div>
-                      <p className="text-sm text-white">{plan.name}</p>
-                      <p className="text-xs text-white/30">BES · {plan.company}</p>
-                    </div>
-                    <span className="text-sm text-white/30 font-mono">—</span>
-                    <span className="text-sm text-white font-mono">
-                      {plan.current_value !== null ? `₺${formatCurrency(plan.current_value)}` : "—"}
-                    </span>
-                    <div>
-                      {plan.pnl !== null ? (
-                        <>
-                          <p className={cn("text-sm font-mono font-medium", plan.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
-                            {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
-                          </p>
-                          <p className={cn("text-xs font-mono", plan.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
-                            {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-sm text-white/20">—</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </>
             )}
+          </div>
         </div>
 
-        {/* Recent investments */}
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-            <p className="text-sm font-medium text-white">Recent Investment Transactions</p>
-            <button onClick={() => navigate("/investments/transactions")} className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors">
+        {/* Holdings mini-table */}
+        <div className="surface" style={{ overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Holdings</span>
+            <button
+              onClick={() => navigate("/investments/portfolio")}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--accent-2)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+            >
               View all <ArrowRight size={12} />
             </button>
           </div>
-          {recentInvestments.length === 0 ? (
-            <div className="flex items-center justify-center py-8"><p className="text-sm text-white/20">No investment transactions yet</p></div>
+          <div className="table-head table-row" style={{ gridTemplateColumns: "1fr 80px 90px 80px" }}>
+            {["Asset", "Qty", "Value", "P&L"].map((h) => <span key={h}>{h}</span>)}
+          </div>
+          {holdingRows.length === 0 && besRows.length === 0 ? (
+            <div style={{ padding: "24px 14px", textAlign: "center" }}>
+              <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No positions yet</p>
+            </div>
           ) : (
-            recentInvestments.map((t) => {
-              const asset = walletAssets.find((a) => a.id === t.asset_id);
-              const isBuy = t.transaction_type === "BUY";
-              return (
-                <div key={t.id} className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: isBuy ? "#34d399" : "#f87171" }} />
-                    <div>
-                      <p className="text-sm text-white">{asset?.name ?? "—"}</p>
-                      <p className="text-xs text-white/30">{formatDateShort(t.date)}</p>
-                    </div>
+            <>
+              {holdingRows.map(({ asset, holding, currentValue, pnl, pnlPct }) => (
+                <div key={holding.id} className="table-row" style={{ gridTemplateColumns: "1fr 80px 90px 80px" }}>
+                  <div>
+                    <p style={{ fontSize: 12.5, color: "var(--fg)", margin: 0 }}>{asset?.name ?? "—"}</p>
+                    <p className="mono" style={{ fontSize: 10, color: "var(--fg-4)", margin: 0 }}>{asset?.symbol ?? "—"}</p>
                   </div>
-                  <div className="text-right">
-                    <p className={cn("text-sm font-medium font-mono", isBuy ? "text-emerald-400" : "text-red-400")}>
-                      {isBuy ? "+" : "−"}{t.quantity.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-white/30 font-mono">{sym}{formatCurrency(t.price)}/unit</p>
+                  <span className="num" style={{ fontSize: 12, color: "var(--fg-3)" }}>{holding.quantity.toFixed(2)}</span>
+                  <span className="num" style={{ fontSize: 12, color: "var(--fg)" }}>{currentValue !== null ? `${sym}${formatCurrency(currentValue)}` : "—"}</span>
+                  <div>
+                    {pnl !== null ? (
+                      <>
+                        <p className="num" style={{ fontSize: 11.5, fontWeight: 600, margin: 0, color: pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
+                          {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
+                        </p>
+                        <p className="num" style={{ fontSize: 10, margin: 0, color: pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.7 }}>
+                          {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
+                        </p>
+                      </>
+                    ) : <span style={{ color: "var(--fg-4)" }}>—</span>}
                   </div>
                 </div>
-              );
-            })
+              ))}
+              {besRows.map((plan) => (
+                <div key={`bes-${plan.id}`} className="table-row" style={{ gridTemplateColumns: "1fr 80px 90px 80px" }}>
+                  <div>
+                    <p style={{ fontSize: 12.5, color: "var(--fg)", margin: 0 }}>{plan.name}</p>
+                    <p className="mono" style={{ fontSize: 10, color: "var(--fg-4)", margin: 0 }}>BES · {plan.company}</p>
+                  </div>
+                  <span style={{ color: "var(--fg-4)" }}>—</span>
+                  <span className="num" style={{ fontSize: 12, color: "var(--fg)" }}>{plan.current_value !== null ? `₺${formatCurrency(plan.current_value)}` : "—"}</span>
+                  <div>
+                    {plan.pnl !== null ? (
+                      <>
+                        <p className="num" style={{ fontSize: 11.5, fontWeight: 600, margin: 0, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
+                          {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
+                        </p>
+                        <p className="num" style={{ fontSize: 10, margin: 0, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.7 }}>
+                          {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
+                        </p>
+                      </>
+                    ) : <span style={{ color: "var(--fg-4)" }}>—</span>}
+                  </div>
+                </div>
+              ))}
+            </>
           )}
         </div>
+      </div>
+
+      {/* Recent investment transactions */}
+      <div className="surface" style={{ overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid var(--line)" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Recent Investment Transactions</span>
+          <button
+            onClick={() => navigate("/investments/transactions")}
+            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--accent-2)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            View all <ArrowRight size={12} />
+          </button>
+        </div>
+        {recentInvestments.length === 0 ? (
+          <div style={{ padding: "24px", textAlign: "center" }}>
+            <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No investment transactions yet</p>
+          </div>
+        ) : (
+          recentInvestments.map((t) => {
+            const asset = walletAssets.find((a) => a.id === t.asset_id);
+            const isBuy = t.transaction_type === "BUY";
+            return (
+              <div key={t.id} className="table-row" style={{ gridTemplateColumns: "1fr auto" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span className="dot" style={{ background: isBuy ? "var(--success)" : "var(--danger)" }} />
+                  <div>
+                    <p style={{ fontSize: 12.5, color: "var(--fg)", margin: 0 }}>{asset?.name ?? "—"}</p>
+                    <p className="mono" style={{ fontSize: 10.5, color: "var(--fg-4)", margin: 0 }}>{formatDateShort(t.date)}</p>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p className="num" style={{ fontSize: 12.5, fontWeight: 500, margin: 0, color: isBuy ? "var(--success)" : "var(--danger)" }}>
+                    {isBuy ? "+" : "−"}{t.quantity.toFixed(2)}
+                  </p>
+                  <p className="num" style={{ fontSize: 10.5, color: "var(--fg-4)", margin: 0 }}>{sym}{formatCurrency(t.price)}/unit</p>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
     </div>

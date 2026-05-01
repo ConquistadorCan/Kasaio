@@ -11,14 +11,12 @@ import { logError } from "../../lib/logger";
 import { formatCurrency } from "../../lib/formatters";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
 import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
-import { cn } from "../../lib/utils";
+import { PageHeader } from "../../components/ui/primitives";
 import type { Asset, InvestmentTransaction } from "../../types/investments";
 
 function currencySymbol(currency: string) {
   return currency === "USD" ? "$" : "₺";
 }
-
-// ── Coupon helpers ────────────────────────────────────────────────────────────
 
 function getCouponDates(asset: Asset): Date[] {
   if (!asset.first_coupon_date || !asset.coupon_frequency || !asset.maturity_date) return [];
@@ -54,8 +52,6 @@ function formatShortDate(d: Date) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-// ── Reusable date picker field ────────────────────────────────────────────────
-
 function DatePickerField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"day" | "month" | "year">("day");
@@ -69,74 +65,73 @@ function DatePickerField({ label, value, onChange }: { label: string; value: str
     onChange(d.toISOString().split("T")[0]);
   }
 
+  const popoverContentStyle = {
+    zIndex: 70, background: "var(--bg-1)", border: "1px solid var(--line)",
+    borderRadius: "var(--r-3)", boxShadow: "0 8px 32px oklch(0 0 0 / 0.4)", padding: 12,
+  };
+
   return (
     <div>
-      <label className="block text-xs font-medium text-white/50 mb-1.5">{label}</label>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+        {label}
+      </label>
       <PopoverPrimitive.Root open={open} onOpenChange={(o) => { setOpen(o); if (!o) setView("day"); }}>
-        <PopoverPrimitive.Trigger className="w-full flex items-center justify-between bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm outline-none transition-colors text-white hover:border-white/20">
-          <span className={value ? "text-white font-mono" : "text-white/20"}>
+        <PopoverPrimitive.Trigger style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: "var(--r-2)", padding: "6px 10px", fontSize: 13, color: value ? "var(--fg)" : "var(--fg-5)", cursor: "pointer", outline: "none" }}>
+          <span className={value ? "mono" : ""}>
             {value
               ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value + "T12:00:00"))
               : "Pick a date"}
           </span>
-          <CalendarIcon size={14} className="text-white/30" />
+          <CalendarIcon size={14} style={{ color: "var(--fg-4)" }} />
         </PopoverPrimitive.Trigger>
         <PopoverPrimitive.Portal>
-          <PopoverPrimitive.Content sideOffset={4} className="z-50 bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3">
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={() => shift(view === "day" ? "day" : "year", -1)}
-                className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
-              >‹</button>
+          <PopoverPrimitive.Content sideOffset={4} style={popoverContentStyle}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <button onClick={() => shift(view === "day" ? "day" : "year", -1)} className="btn-icon" style={{ fontSize: 18 }}>‹</button>
               {view === "year" ? (
-                <span className="text-sm font-medium text-white px-2 py-1">{`${year - 6} – ${year + 5}`}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{`${year - 6} – ${year + 5}`}</span>
               ) : (
                 <button
                   onClick={() => setView((v) => v === "day" ? "month" : "year")}
-                  className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+                  style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "var(--r-2)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg)")}
                 >
                   {view === "day"
                     ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(current)
                     : year}
                 </button>
               )}
-              <button
-                onClick={() => shift(view === "day" ? "day" : "year", 1)}
-                className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
-              >›</button>
+              <button onClick={() => shift(view === "day" ? "day" : "year", 1)} className="btn-icon" style={{ fontSize: 18 }}>›</button>
             </div>
 
             {view === "year" ? (
-              <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", height: 192, width: 224 }}>
                 {Array.from({ length: 12 }, (_, i) => {
                   const y = year - 6 + i;
                   return (
-                    <button key={y} onClick={() => { const d = new Date(value ? value + "T12:00:00" : Date.now()); d.setFullYear(y); onChange(d.toISOString().split("T")[0]); setView("month"); }}
-                      className={cn("flex items-center justify-center rounded-lg text-sm font-medium transition-colors", year === y ? "bg-violet-500/30 text-violet-300" : "text-white/60 hover:bg-white/5 hover:text-white")}>
-                      {y}
-                    </button>
+                    <button key={y}
+                      onClick={() => { const d = new Date(value ? value + "T12:00:00" : Date.now()); d.setFullYear(y); onChange(d.toISOString().split("T")[0]); setView("month"); }}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--r-2)", fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", background: year === y ? "var(--accent-bg)" : "none", color: year === y ? "var(--accent-2)" : "var(--fg-3)" }}
+                    >{y}</button>
                   );
                 })}
               </div>
             ) : view === "month" ? (
-              <div className="grid grid-cols-3 grid-rows-4 h-[192px] w-[224px]">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", height: 192, width: 224 }}>
                 {Array.from({ length: 12 }, (_, i) => {
                   const lbl = new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(2000, i, 1));
                   return (
-                    <button key={i} onClick={() => { const d = new Date(value ? value + "T12:00:00" : Date.now()); d.setMonth(i); onChange(d.toISOString().split("T")[0]); setView("day"); }}
-                      className={cn("flex items-center justify-center rounded-lg text-sm font-medium transition-colors", current.getMonth() === i ? "bg-violet-500/30 text-violet-300" : "text-white/60 hover:bg-white/5 hover:text-white")}>
-                      {lbl}
-                    </button>
+                    <button key={i}
+                      onClick={() => { const d = new Date(value ? value + "T12:00:00" : Date.now()); d.setMonth(i); onChange(d.toISOString().split("T")[0]); setView("day"); }}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--r-2)", fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", background: current.getMonth() === i ? "var(--accent-bg)" : "none", color: current.getMonth() === i ? "var(--accent-2)" : "var(--fg-3)" }}
+                    >{lbl}</button>
                   );
                 })}
               </div>
             ) : (
               <>
-                <DayPicker
-                  mode="single"
-                  month={current}
-                  hideNavigation
-                  selected={value ? new Date(value + "T12:00:00") : undefined}
+                <DayPicker mode="single" month={current} hideNavigation selected={value ? new Date(value + "T12:00:00") : undefined}
                   onSelect={(day) => {
                     if (day) {
                       const local = new Date(day.getTime() - day.getTimezoneOffset() * 60000);
@@ -146,10 +141,7 @@ function DatePickerField({ label, value, onChange }: { label: string; value: str
                   }}
                   classNames={DAY_PICKER_CLASS_NAMES}
                 />
-                <button
-                  onClick={() => onChange(new Date().toISOString().split("T")[0])}
-                  className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
-                >
+                <button onClick={() => onChange(new Date().toISOString().split("T")[0])} style={{ marginTop: 8, width: "100%", padding: "6px", borderRadius: "var(--r-2)", fontSize: 11.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer" }}>
                   Today
                 </button>
               </>
@@ -160,8 +152,6 @@ function DatePickerField({ label, value, onChange }: { label: string; value: str
     </div>
   );
 }
-
-// ── Eurobond details modal ────────────────────────────────────────────────────
 
 interface DetailsModalProps {
   asset: Asset;
@@ -186,13 +176,11 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
   const [lastEdited, setLastEdited] = useState<"rate" | "price">("rate");
 
   function fp(n: number): string { return String(parseFloat(n.toPrecision(10))); }
-
   function calcPrice(rate: string, fv: string, freq: string): string {
     const r = parseFloat(rate), f = parseFloat(fv), q = parseFloat(freq);
     if (!r || !f || !q) return "";
     return fp((f * r) / 100 / q);
   }
-
   function calcRate(price: string, fv: string, freq: string): string {
     const p = parseFloat(price), f = parseFloat(fv), q = parseFloat(freq);
     if (!p || !f || !q) return "";
@@ -209,20 +197,18 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
     });
   }
 
-  const inputCls = "w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none focus:border-violet-500/50 transition-colors font-mono";
-  const labelCls = "block text-xs font-medium text-white/50 mb-1.5";
+  const labelStyle = { display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6 };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="text-base font-semibold text-white mb-1">Eurobond Details</h2>
-        <p className="text-xs text-white/30 mb-5">{asset.name} · {asset.symbol}</p>
+    <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "oklch(0 0 0 / 0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 400, background: "var(--bg-2)", border: "1px solid var(--line-strong)", borderRadius: "var(--r-4)", padding: 20, boxShadow: "0 20px 60px oklch(0 0 0 / 0.5)" }}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>Eurobond Details</h2>
+        <p style={{ fontSize: 12, color: "var(--fg-4)", marginBottom: 16 }}>{asset.name} · {asset.symbol}</p>
 
-        <div className="flex flex-col gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label className={labelCls}>Face Value (USD per bond)</label>
-            <input
-              type="number" value={form.face_value} placeholder="1000"
+            <label style={labelStyle}>Face Value (USD per bond)</label>
+            <input type="number" value={form.face_value} placeholder="1000" style={{ width: "100%" }}
               onChange={(e) => {
                 const fv = e.target.value;
                 setForm((p) => lastEdited === "rate"
@@ -230,37 +216,32 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
                   : { ...p, face_value: fv, coupon_rate: calcRate(p.coupon_price, fv, p.coupon_frequency) }
                 );
               }}
-              className={inputCls}
             />
           </div>
           <div>
-            <label className={labelCls}>Annual Coupon Rate (%)</label>
-            <input
-              type="number" value={form.coupon_rate} placeholder="6.5" step="0.01"
+            <label style={labelStyle}>Annual Coupon Rate (%)</label>
+            <input type="number" value={form.coupon_rate} placeholder="6.5" step="0.01" style={{ width: "100%" }}
               onChange={(e) => {
                 const rate = e.target.value;
                 setLastEdited("rate");
                 setForm((p) => ({ ...p, coupon_rate: rate, coupon_price: calcPrice(rate, p.face_value, p.coupon_frequency) }));
               }}
-              className={inputCls}
             />
           </div>
-          <div className="flex justify-center text-white/20 text-xs select-none -my-1">↕</div>
+          <div style={{ textAlign: "center", color: "var(--fg-5)", fontSize: 12, userSelect: "none" }}>↕</div>
           <div>
-            <label className={labelCls}>Coupon Price (per bond per payment)</label>
-            <input
-              type="number" value={form.coupon_price} placeholder="e.g. 32.5" step="any" min="0"
+            <label style={labelStyle}>Coupon Price (per bond per payment)</label>
+            <input type="number" value={form.coupon_price} placeholder="e.g. 32.5" step="any" min="0" style={{ width: "100%" }}
               onChange={(e) => {
                 const price = e.target.value;
                 setLastEdited("price");
                 setForm((p) => ({ ...p, coupon_price: price, coupon_rate: calcRate(price, p.face_value, p.coupon_frequency) }));
               }}
-              className={inputCls}
             />
           </div>
           <div>
-            <label className={labelCls}>Coupon Frequency (per year)</label>
-            <div className="flex gap-2">
+            <label style={labelStyle}>Coupon Frequency (per year)</label>
+            <div style={{ display: "flex", gap: 6 }}>
               {[{ v: "1", label: "Annual" }, { v: "2", label: "Semi-annual" }].map(({ v, label }) => (
                 <button
                   key={v}
@@ -268,50 +249,32 @@ function EurobondDetailsModal({ asset, onSave, onClose, loading }: DetailsModalP
                     ? { ...p, coupon_frequency: v, coupon_price: calcPrice(p.coupon_rate, p.face_value, v) }
                     : { ...p, coupon_frequency: v, coupon_rate: calcRate(p.coupon_price, p.face_value, v) }
                   )}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors border",
-                    form.coupon_frequency === v
-                      ? "bg-violet-500/15 text-violet-400 border-violet-500/25"
-                      : "bg-white/5 text-white/40 border-white/5 hover:bg-white/[0.08]"
-                  )}
+                  style={{
+                    flex: 1, padding: "7px", borderRadius: "var(--r-2)", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 80ms",
+                    border: "1px solid", background: form.coupon_frequency === v ? "var(--accent-bg)" : "var(--bg-1)",
+                    color: form.coupon_frequency === v ? "var(--accent-2)" : "var(--fg-4)",
+                    borderColor: form.coupon_frequency === v ? "var(--accent-line)" : "var(--line)",
+                  }}
                 >
                   {label}
                 </button>
               ))}
             </div>
           </div>
-          <DatePickerField
-            label="First Coupon Date"
-            value={form.first_coupon_date}
-            onChange={(v) => setForm((p) => ({ ...p, first_coupon_date: v }))}
-          />
-          <DatePickerField
-            label="Maturity Date"
-            value={form.maturity_date}
-            onChange={(v) => setForm((p) => ({ ...p, maturity_date: v }))}
-          />
+          <DatePickerField label="First Coupon Date" value={form.first_coupon_date} onChange={(v) => setForm((p) => ({ ...p, first_coupon_date: v }))} />
+          <DatePickerField label="Maturity Date" value={form.maturity_date} onChange={(v) => setForm((p) => ({ ...p, maturity_date: v }))} />
         </div>
 
-        <div className="flex gap-2 mt-6">
-          <button
-            onClick={onClose} disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave} disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Save"}
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <button onClick={onClose} disabled={loading} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+          <button onClick={handleSave} disabled={loading} className="btn btn-primary" style={{ flex: 1 }}>
+            {loading ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-// ── Calendar ──────────────────────────────────────────────────────────────────
 
 interface CouponEvent {
   asset: Asset;
@@ -323,42 +286,32 @@ interface CouponEvent {
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-function CouponCalendar({
-  events,
-  onRecord,
-}: {
-  events: CouponEvent[];
-  onRecord: (event: CouponEvent) => void;
-}) {
+function CouponCalendar({ events, onRecord }: { events: CouponEvent[]; onRecord: (event: CouponEvent) => void }) {
   const [year, setYear] = useState(new Date().getFullYear());
-  const [drillMonth, setDrillMonth] = useState<number | null>(null); // null = year view
-
+  const [drillMonth, setDrillMonth] = useState<number | null>(null);
   const today = new Date();
 
   const legend = (
-    <div className="flex items-center gap-3 text-xs text-white/30">
-      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />Recorded</span>
-      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Overdue</span>
-      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />Upcoming</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "var(--fg-4)" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="dot" style={{ background: "var(--success)" }} />Recorded</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="dot" style={{ background: "var(--warning)" }} />Overdue</span>
+      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span className="dot" style={{ background: "var(--accent)" }} />Upcoming</span>
     </div>
   );
 
-  // ── Year view ──────────────────────────────────────────────────────────────
   if (drillMonth === null) {
     return (
-      <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-white">Coupon Calendar</p>
+      <div className="surface" style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Coupon Calendar</p>
           {legend}
         </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => setYear((y) => y - 1)} className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-xl">‹</button>
-          <span className="text-sm font-medium text-white">{year}</span>
-          <button onClick={() => setYear((y) => y + 1)} className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-xl">›</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <button onClick={() => setYear((y) => y - 1)} className="btn-icon" style={{ fontSize: 18 }}>‹</button>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{year}</span>
+          <button onClick={() => setYear((y) => y + 1)} className="btn-icon" style={{ fontSize: 18 }}>›</button>
         </div>
-
-        <div className="grid grid-cols-3 gap-2">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
           {MONTH_NAMES.map((name, i) => {
             const monthEvts = events.filter((e) => e.date.getFullYear() === year && e.date.getMonth() === i);
             const totalAmount = monthEvts.reduce((s, e) => s + e.amount, 0);
@@ -366,43 +319,31 @@ function CouponCalendar({
             const overdueEvts = monthEvts.filter((e) => e.overdue);
             const upcomingEvts = monthEvts.filter((e) => !e.recorded && !e.overdue);
             const isCurrentMonth = today.getFullYear() === year && today.getMonth() === i;
-
             return (
               <button
                 key={i}
                 onClick={() => setDrillMonth(i)}
-                className={cn(
-                  "flex flex-col items-start p-3 rounded-xl border transition-colors text-left hover:bg-white/[0.05]",
-                  monthEvts.length > 0 ? "bg-white/[0.03] border-white/10" : "bg-white/[0.01] border-white/5",
-                  isCurrentMonth && "ring-1 ring-violet-500/40"
-                )}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "flex-start", padding: 10,
+                  borderRadius: "var(--r-2)", border: `1px solid ${monthEvts.length > 0 ? "var(--line)" : "var(--line-soft)"}`,
+                  background: monthEvts.length > 0 ? "var(--bg-3)" : "var(--bg-1)",
+                  cursor: "pointer", textAlign: "left", outline: isCurrentMonth ? "1px solid var(--accent-line)" : "none",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--line-strong)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = monthEvts.length > 0 ? "var(--line)" : "var(--line-soft)")}
               >
-                <span className={cn("text-xs font-medium mb-2", isCurrentMonth ? "text-violet-400" : "text-white/50")}>
-                  {name}
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 500, marginBottom: 6, color: isCurrentMonth ? "var(--accent-2)" : "var(--fg-3)" }}>{name}</span>
                 {totalAmount > 0 ? (
                   <>
-                    <span className="text-sm font-mono font-medium text-white">${formatCurrency(totalAmount)}</span>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {recordedEvts.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
-                          {recordedEvts.length} recorded
-                        </span>
-                      )}
-                      {overdueEvts.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-                          {overdueEvts.length} due
-                        </span>
-                      )}
-                      {upcomingEvts.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400">
-                          {upcomingEvts.length} upcoming
-                        </span>
-                      )}
+                    <span className="num" style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>${formatCurrency(totalAmount)}</span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 5 }}>
+                      {recordedEvts.length > 0 && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 99, background: "var(--success-bg)", color: "var(--success)" }}>{recordedEvts.length} recorded</span>}
+                      {overdueEvts.length > 0 && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 99, background: "var(--warning-bg)", color: "var(--warning)" }}>{overdueEvts.length} due</span>}
+                      {upcomingEvts.length > 0 && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 99, background: "var(--accent-bg)", color: "var(--accent-2)" }}>{upcomingEvts.length} upcoming</span>}
                     </div>
                   </>
                 ) : (
-                  <span className="text-xs text-white/15">—</span>
+                  <span style={{ fontSize: 11, color: "var(--fg-5)" }}>—</span>
                 )}
               </button>
             );
@@ -412,7 +353,6 @@ function CouponCalendar({
     );
   }
 
-  // ── Month/day view ─────────────────────────────────────────────────────────
   const monthLabel = `${MONTH_NAMES[drillMonth]} ${year}`;
   const firstDay = new Date(year, drillMonth, 1).getDay();
   const daysInMonth = new Date(year, drillMonth + 1, 0).getDate();
@@ -434,65 +374,63 @@ function CouponCalendar({
   }
 
   return (
-    <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-semibold text-white">Coupon Calendar</p>
+    <div className="surface" style={{ padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Coupon Calendar</p>
         {legend}
       </div>
-
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-xl">‹</button>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <button onClick={prevMonth} className="btn-icon" style={{ fontSize: 18 }}>‹</button>
         <button
           onClick={() => setDrillMonth(null)}
-          className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+          style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)", background: "none", border: "none", cursor: "pointer", padding: "4px 8px", borderRadius: "var(--r-2)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent-2)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg)")}
         >
           {monthLabel}
         </button>
-        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-xl">›</button>
+        <button onClick={nextMonth} className="btn-icon" style={{ fontSize: 18 }}>›</button>
       </div>
 
-      <div className="grid grid-cols-7 mb-1">
-        {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
-          <div key={d} className="text-center text-[10px] font-medium text-white/20 py-1">{d}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
+        {["Mo","Tu","We","Th","Fr","Sa","Su"].map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 500, color: "var(--fg-5)", padding: "3px 0" }}>{d}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-px">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1 }}>
         {Array.from({ length: totalCells }, (_, i) => {
           const day = i - startOffset + 1;
           const isCurrentMonth = day >= 1 && day <= daysInMonth;
-          const isToday = isCurrentMonth &&
-            today.getFullYear() === year &&
-            today.getMonth() === drillMonth &&
-            today.getDate() === day;
+          const isToday = isCurrentMonth && today.getFullYear() === year && today.getMonth() === drillMonth && today.getDate() === day;
           const dayEvents = isCurrentMonth ? eventsForDay(day) : [];
-
           return (
             <div
               key={i}
-              className={cn(
-                "min-h-[48px] rounded-md p-1 flex flex-col",
-                isCurrentMonth ? "bg-white/[0.02]" : "opacity-0 pointer-events-none",
-                isToday && "ring-1 ring-violet-500/40"
-              )}
+              style={{
+                minHeight: 44, borderRadius: "var(--r-1)", padding: 3,
+                display: "flex", flexDirection: "column",
+                background: isCurrentMonth ? "var(--bg-1)" : "transparent",
+                outline: isToday ? "1px solid var(--accent-line)" : "none",
+                opacity: isCurrentMonth ? 1 : 0, pointerEvents: isCurrentMonth ? "auto" : "none",
+              }}
             >
-              <span className={cn("text-[11px] font-mono mb-0.5", isToday ? "text-violet-400" : "text-white/30")}>
+              <span className="mono" style={{ fontSize: 10, marginBottom: 2, color: isToday ? "var(--accent-2)" : "var(--fg-4)" }}>
                 {isCurrentMonth ? day : ""}
               </span>
-              <div className="flex flex-col gap-0.5">
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 {dayEvents.map((e, ei) => (
                   <button
                     key={ei}
                     onClick={() => !e.recorded && onRecord(e)}
                     title={`${e.asset.name}: $${formatCurrency(e.amount)}${e.recorded ? " (recorded)" : ""}`}
-                    className={cn(
-                      "w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate transition-colors",
-                      e.recorded
-                        ? "bg-emerald-500/15 text-emerald-400 cursor-default"
-                        : e.overdue
-                          ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 cursor-pointer"
-                          : "bg-violet-500/15 text-violet-400 hover:bg-violet-500/25 cursor-pointer"
-                    )}
+                    style={{
+                      width: "100%", textAlign: "left", fontSize: 9, lineHeight: 1.3, padding: "1px 3px", borderRadius: 2,
+                      border: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      cursor: e.recorded ? "default" : "pointer",
+                      background: e.recorded ? "var(--success-bg)" : e.overdue ? "var(--warning-bg)" : "var(--accent-bg)",
+                      color: e.recorded ? "var(--success)" : e.overdue ? "var(--warning)" : "var(--accent-2)",
+                    }}
                   >
                     {e.asset.symbol}
                   </button>
@@ -504,34 +442,33 @@ function CouponCalendar({
       </div>
 
       {monthEvents.length > 0 && (
-        <div className="mt-4 border-t border-white/5 pt-4 flex flex-col gap-2">
-          <p className="text-xs font-medium text-white/30 uppercase tracking-wider mb-1">
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--line-soft)", paddingTop: 14 }}>
+          <p style={{ fontSize: 10.5, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
             {monthLabel} Coupons
           </p>
           {monthEvents.sort((a, b) => a.date.getTime() - b.date.getTime()).map((e, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--line-soft)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {e.recorded
-                  ? <CheckCircle size={13} className="text-emerald-400 shrink-0" />
+                  ? <CheckCircle size={13} style={{ color: "var(--success)", flexShrink: 0 }} />
                   : e.overdue
-                    ? <AlertCircle size={13} className="text-amber-400 shrink-0" />
-                    : <Clock size={13} className="text-violet-400 shrink-0" />}
+                    ? <AlertCircle size={13} style={{ color: "var(--warning)", flexShrink: 0 }} />
+                    : <Clock size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />}
                 <div>
-                  <p className="text-sm text-white">{e.asset.name}</p>
-                  <p className="text-xs text-white/30">{formatShortDate(e.date)}</p>
+                  <p style={{ fontSize: 13, color: "var(--fg)" }}>{e.asset.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{formatShortDate(e.date)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono text-white/70">${formatCurrency(e.amount)}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>${formatCurrency(e.amount)}</span>
                 {!e.recorded && (
                   <button
                     onClick={() => onRecord(e)}
-                    className={cn(
-                      "text-xs px-2 py-1 rounded-md font-medium transition-colors",
-                      e.overdue
-                        ? "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
-                        : "bg-violet-500/15 text-violet-400 hover:bg-violet-500/25"
-                    )}
+                    style={{
+                      fontSize: 11, padding: "3px 8px", borderRadius: "var(--r-1)", fontWeight: 500, border: "none", cursor: "pointer",
+                      background: e.overdue ? "var(--warning-bg)" : "var(--accent-bg)",
+                      color: e.overdue ? "var(--warning)" : "var(--accent-2)",
+                    }}
                   >
                     Record
                   </button>
@@ -541,15 +478,12 @@ function CouponCalendar({
           ))}
         </div>
       )}
-
-      {monthEvents.length === 0 && (
-        <p className="text-xs text-white/20 text-center mt-4">No coupon payments this month</p>
-      )}
     </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+const HOLD_COLS = "1fr 60px 70px 110px 100px 130px 120px 32px";
+const CLOSED_COLS = "1fr 80px 160px";
 
 export function Eurobond() {
   const { assets, holdings, latestPrices, investmentTransactions, addInvestmentTransaction, refreshHolding, refreshAsset } = useInvestmentStore();
@@ -567,12 +501,8 @@ export function Eurobond() {
 
   const closedRows = closedEurobondAssets.map((asset) => {
     const holding = holdings.find((h) => h.asset_id === asset.id);
-    const totalIncome = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
-    const totalInvested = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "BUY")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalIncome = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalInvested = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "BUY").reduce((sum, t) => sum + t.quantity * t.price, 0);
     const realizedPnl = (holding?.realized_pnl ?? 0) + totalIncome;
     const realizedPnlPct = totalInvested > 0 ? (realizedPnl / totalInvested) * 100 : null;
     return { asset, realizedPnl, realizedPnlPct };
@@ -584,31 +514,21 @@ export function Eurobond() {
     const sym = currencySymbol(asset.currency);
     const currentValue = latestPrice !== null && holding ? latestPrice * holding.quantity : null;
     const costBasis = holding ? holding.average_cost * holding.quantity : null;
-    const totalIncome = investmentTransactions
-      .filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME")
-      .reduce((sum, t) => sum + t.quantity * t.price, 0);
+    const totalIncome = investmentTransactions.filter((t) => t.asset_id === asset.id && t.transaction_type === "INCOME").reduce((sum, t) => sum + t.quantity * t.price, 0);
     const realizedPnl = holding?.realized_pnl ?? 0;
     const extraPnl = totalIncome + realizedPnl;
-    const pnl = currentValue !== null && costBasis !== null
-      ? (currentValue - costBasis) + extraPnl
-      : extraPnl !== 0 ? extraPnl : null;
+    const pnl = currentValue !== null && costBasis !== null ? (currentValue - costBasis) + extraPnl : extraPnl !== 0 ? extraPnl : null;
     const pnlPct = pnl !== null && costBasis ? (pnl / costBasis) * 100 : null;
-
-    // Coupon info
     const couponDates = getCouponDates(asset);
-    const today = new Date();
-    const nextCoupon = couponDates.find((d) => d >= today) ?? null;
-    const overdueCount = couponDates.filter(
-      (d) => d < today && !isCouponRecorded(asset.id, d, investmentTransactions)
-    ).length;
-
+    const now = new Date();
+    const nextCoupon = couponDates.find((d) => d >= now) ?? null;
+    const overdueCount = couponDates.filter((d) => d < now && !isCouponRecorded(asset.id, d, investmentTransactions)).length;
     return { asset, holding, latestPrice, sym, currentValue, pnl, pnlPct, nextCoupon, overdueCount };
   });
 
-  // All coupon events for all active holdings (for calendar)
   const couponEvents: CouponEvent[] = useMemo(() => {
     const events: CouponEvent[] = [];
-    const today = new Date();
+    const now = new Date();
     for (const asset of eurobondAssets) {
       const holding = holdings.find((h) => h.asset_id === asset.id);
       if (!holding) continue;
@@ -616,7 +536,7 @@ export function Eurobond() {
       const amount = couponAmountPerPayment(asset, holding.quantity);
       for (const date of dates) {
         const recorded = isCouponRecorded(asset.id, date, investmentTransactions);
-        events.push({ asset, date, amount, recorded, overdue: date < today && !recorded });
+        events.push({ asset, date, amount, recorded, overdue: date < now && !recorded });
       }
     }
     return events;
@@ -632,13 +552,7 @@ export function Eurobond() {
     setShowIncomeModal(true);
   }
 
-  async function handleAddTransaction(data: {
-    asset_id: number;
-    transaction_type: "BUY" | "SELL";
-    quantity: number;
-    price: number;
-    date: string;
-  }): Promise<string | undefined> {
+  async function handleAddTransaction(data: { asset_id: number; transaction_type: "BUY" | "SELL"; quantity: number; price: number; date: string }): Promise<string | undefined> {
     setMutating(true);
     try {
       const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
@@ -654,13 +568,7 @@ export function Eurobond() {
     }
   }
 
-  async function handleAddIncome(data: {
-    asset_id: number;
-    transaction_type: "INCOME";
-    quantity: number;
-    price: number;
-    date: string;
-  }): Promise<string | undefined> {
+  async function handleAddIncome(data: { asset_id: number; transaction_type: "INCOME"; quantity: number; price: number; date: string }): Promise<string | undefined> {
     setMutating(true);
     try {
       const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
@@ -692,32 +600,27 @@ export function Eurobond() {
   const hasCalendarData = eurobondAssets.some((a) => a.first_coupon_date && a.maturity_date);
 
   return (
-    <div className="flex flex-col h-full gap-5 overflow-y-auto pb-6">
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Eurobonds</h1>
-          <p className="text-sm text-white/40 mt-0.5">{eurobondAssets.length} assets</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          New Transaction
-        </button>
-      </div>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", paddingBottom: 24 }}>
+      <PageHeader
+        title="Eurobonds"
+        meta={`${eurobondAssets.length} assets`}
+        actions={
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> New Transaction
+          </button>
+        }
+      />
 
-      {/* ── Active holdings table ── */}
-      <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col shrink-0">
-        <div className="grid grid-cols-[1fr_60px_70px_110px_100px_130px_120px_32px] px-5 py-3 border-b border-white/5">
+      {/* Active holdings */}
+      <div className="surface" style={{ overflow: "hidden" }}>
+        <div className="table-head" style={{ gridTemplateColumns: HOLD_COLS }}>
           {["Asset", "CCY", "Qty", "Avg Cost", "Maturity", "Next Coupon", "P&L", ""].map((col) => (
-            <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
+            <span key={col}>{col}</span>
           ))}
         </div>
-
         {rows.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-white/20">No Eurobonds held</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+            <p style={{ fontSize: 13, color: "var(--fg-5)" }}>No Eurobonds held</p>
           </div>
         ) : (
           rows.map(({ asset, holding, sym, pnl, pnlPct, nextCoupon, overdueCount }) => {
@@ -725,79 +628,71 @@ export function Eurobond() {
             const daysToMaturity = maturity ? daysUntil(maturity) : null;
             const couponRate = asset.coupon_rate ? `${(Number(asset.coupon_rate) * 100).toFixed(2)}%` : "—";
             const nextCouponAmount = holding && asset.face_value && asset.coupon_rate && asset.coupon_frequency
-              ? couponAmountPerPayment(asset, holding.quantity)
-              : null;
-
+              ? couponAmountPerPayment(asset, holding.quantity) : null;
             return (
-              <div
-                key={asset.id}
-                className="grid grid-cols-[1fr_60px_70px_110px_100px_130px_120px_32px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+              <div key={asset.id} className="table-row" style={{ gridTemplateColumns: HOLD_COLS }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "")}
               >
                 <div>
-                  <p className="text-sm font-medium text-white">{asset.name}</p>
-                  <p className="text-xs text-white/30 mt-0.5">{asset.symbol}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{asset.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{asset.symbol}</p>
                   {overdueCount > 0 && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">
-                      <AlertCircle size={10} />{overdueCount} due
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 3, fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 99, background: "var(--warning-bg)", color: "var(--warning)" }}>
+                      <AlertCircle size={9} />{overdueCount} due
                     </span>
                   )}
                 </div>
-                <span className="text-xs text-white/40 font-mono">{asset.currency}</span>
-                <span className="text-sm text-white/70 font-mono">{holding ? holding.quantity.toFixed(2) : "—"}</span>
+                <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{asset.currency}</span>
+                <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{holding ? holding.quantity.toFixed(2) : "—"}</span>
                 <div>
-                  <span className="text-sm text-white/70 font-mono">
+                  <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>
                     {holding ? `${sym}${formatCurrency(holding.average_cost)}` : "—"}
                   </span>
                   {asset.coupon_rate && (
-                    <p className="text-xs text-white/30 mt-0.5">{couponRate} coupon</p>
+                    <p style={{ fontSize: 10.5, color: "var(--fg-4)", marginTop: 1 }}>{couponRate} coupon</p>
                   )}
                 </div>
                 <div>
                   {maturity ? (
                     <>
-                      <p className="text-sm text-white/70 font-mono">
+                      <p className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>
                         {maturity.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
                       </p>
                       {daysToMaturity !== null && (
-                        <p className={cn("text-xs mt-0.5", daysToMaturity < 90 ? "text-amber-400/70" : "text-white/30")}>
+                        <p style={{ fontSize: 10.5, marginTop: 1, color: daysToMaturity < 90 ? "var(--warning)" : "var(--fg-4)" }}>
                           {daysToMaturity > 0 ? `${daysToMaturity}d` : "Matured"}
                         </p>
                       )}
                     </>
-                  ) : <span className="text-sm text-white/20">—</span>}
+                  ) : <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>}
                 </div>
                 <div>
                   {nextCoupon ? (
                     <>
-                      <p className="text-sm text-white/70 font-mono">
+                      <p className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>
                         {nextCoupon.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
                       </p>
                       {nextCouponAmount !== null && (
-                        <p className="text-xs text-white/30 mt-0.5">${formatCurrency(nextCouponAmount)}</p>
+                        <p style={{ fontSize: 10.5, color: "var(--fg-4)", marginTop: 1 }}>${formatCurrency(nextCouponAmount)}</p>
                       )}
                     </>
-                  ) : <span className="text-sm text-white/20">—</span>}
+                  ) : <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>}
                 </div>
                 <div>
                   {pnl !== null ? (
                     <>
-                      <p className={cn("text-sm font-mono font-medium", pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                      <p className="num" style={{ fontSize: 13, fontWeight: 500, color: pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
                         {pnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
                       </p>
-                      <p className={cn("text-xs font-mono mt-0.5", pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                      <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                         {pnl >= 0 ? "+" : ""}{pnlPct?.toFixed(2)}%
                       </p>
                     </>
-                  ) : (
-                    <span className="text-sm text-white/20">—</span>
-                  )}
+                  ) : <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>}
                 </div>
-                <button
-                  onClick={() => setEditingAsset(asset)}
-                  className="flex items-center justify-center w-7 h-7 rounded-md text-white/20 hover:text-white/60 hover:bg-white/5 transition-colors"
-                  title="Edit eurobond details"
-                >
-                  <Pencil size={13} />
+                <button onClick={() => setEditingAsset(asset)} className="btn-icon" title="Edit eurobond details">
+                  <Pencil size={12} />
                 </button>
               </div>
             );
@@ -805,38 +700,36 @@ export function Eurobond() {
         )}
       </div>
 
-      {/* ── Closed positions ── */}
+      {/* Closed positions */}
       {closedRows.length > 0 && (
-        <div className="shrink-0">
+        <div>
           <button
             onClick={() => setShowClosed((p) => !p)}
-            className="flex items-center gap-2 text-sm text-white/30 hover:text-white/50 transition-colors"
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
-            <ChevronDown size={14} className={cn("transition-transform", showClosed && "rotate-180")} />
+            <ChevronDown size={14} style={{ transform: showClosed ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
             Closed Positions ({closedRows.length})
           </button>
           {showClosed && (
-            <div className="mt-2 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[1fr_80px_160px] px-5 py-3 border-b border-white/5">
-                {["Asset", "CCY", "Realized P&L"].map((col) => (
-                  <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
-                ))}
+            <div className="surface" style={{ overflow: "hidden", marginTop: 8 }}>
+              <div className="table-head" style={{ gridTemplateColumns: CLOSED_COLS }}>
+                {["Asset", "CCY", "Realized P&L"].map((col) => <span key={col}>{col}</span>)}
               </div>
               {closedRows.map(({ asset, realizedPnl, realizedPnlPct }) => {
                 const sym = currencySymbol(asset.currency);
                 return (
-                  <div key={asset.id} className="grid grid-cols-[1fr_80px_160px] px-5 py-4 border-b border-white/5 last:border-0 items-center">
+                  <div key={asset.id} className="table-row" style={{ gridTemplateColumns: CLOSED_COLS }}>
                     <div>
-                      <p className="text-sm font-medium text-white/50">{asset.name}</p>
-                      <p className="text-xs text-white/20 mt-0.5">{asset.symbol}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-3)" }}>{asset.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--fg-5)", marginTop: 1 }}>{asset.symbol}</p>
                     </div>
-                    <span className="text-xs text-white/30 font-mono">{asset.currency}</span>
+                    <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{asset.currency}</span>
                     <div>
-                      <p className={cn("text-sm font-mono font-medium", realizedPnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                      <p className="num" style={{ fontSize: 13, fontWeight: 500, color: realizedPnl >= 0 ? "var(--success)" : "var(--danger)" }}>
                         {realizedPnl >= 0 ? "+" : ""}{sym}{formatCurrency(Math.abs(realizedPnl))}
                       </p>
                       {realizedPnlPct !== null && (
-                        <p className={cn("text-xs font-mono mt-0.5", realizedPnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                        <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: realizedPnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                           {realizedPnl >= 0 ? "+" : ""}{realizedPnlPct.toFixed(2)}%
                         </p>
                       )}
@@ -849,46 +742,25 @@ export function Eurobond() {
         </div>
       )}
 
-      {/* ── Coupon calendar ── */}
+      {/* Coupon calendar */}
       {hasCalendarData ? (
         <CouponCalendar events={couponEvents} onRecord={handleRecordCoupon} />
       ) : eurobondAssets.length > 0 && (
-        <div className="bg-[#0e0e18] border border-white/5 rounded-xl p-5 text-center shrink-0">
-          <p className="text-sm text-white/30">Set coupon details on your holdings using the <Pencil size={12} className="inline" /> button to enable the coupon calendar.</p>
+        <div className="surface" style={{ padding: 16, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "var(--fg-4)" }}>Set coupon details on your holdings using the <Pencil size={12} style={{ display: "inline" }} /> button to enable the coupon calendar.</p>
         </div>
       )}
 
-      {/* ── Modals ── */}
       {showModal && (
-        <TransactionModal
-          mode="add"
-          assets={allEurobondAssets}
-          holdings={holdings}
-          onSubmit={handleAddTransaction}
-          onClose={() => setShowModal(false)}
-          loading={mutating}
-        />
+        <TransactionModal mode="add" assets={allEurobondAssets} holdings={holdings} onSubmit={handleAddTransaction} onClose={() => setShowModal(false)} loading={mutating} />
       )}
-
       {showIncomeModal && (
-        <IncomeTransactionModal
-          onSubmit={handleAddIncome}
-          onClose={() => { setShowIncomeModal(false); setPrefillIncome(null); }}
-          loading={mutating}
-          prefillAssetId={prefillIncome?.asset.id}
-          prefillQuantity={prefillIncome?.quantity}
-          prefillPricePerUnit={prefillIncome?.pricePerUnit}
-          prefillDate={prefillIncome?.date}
+        <IncomeTransactionModal onSubmit={handleAddIncome} onClose={() => { setShowIncomeModal(false); setPrefillIncome(null); }} loading={mutating}
+          prefillAssetId={prefillIncome?.asset.id} prefillQuantity={prefillIncome?.quantity} prefillPricePerUnit={prefillIncome?.pricePerUnit} prefillDate={prefillIncome?.date}
         />
       )}
-
       {editingAsset && (
-        <EurobondDetailsModal
-          asset={editingAsset}
-          onSave={handleSaveDetails}
-          onClose={() => setEditingAsset(null)}
-          loading={detailsLoading}
-        />
+        <EurobondDetailsModal asset={editingAsset} onSave={handleSaveDetails} onClose={() => setEditingAsset(null)} loading={detailsLoading} />
       )}
     </div>
   );

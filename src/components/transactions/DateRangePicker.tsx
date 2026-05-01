@@ -2,7 +2,6 @@ import { useState } from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { DayPicker } from "react-day-picker";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
 import { DAY_PICKER_RANGE_CLASS_NAMES } from "./types";
 
 export interface DateRange {
@@ -50,12 +49,15 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
   return (
     <PopoverPrimitive.Root>
       <PopoverPrimitive.Trigger
-        className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
-          value
-            ? "bg-violet-500/15 border-violet-500/30 text-violet-300"
-            : "bg-white/5 border-white/[0.08] text-white/40 hover:text-white/70 hover:bg-white/[0.08]",
-        )}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "4px 10px", borderRadius: "var(--r-2)",
+          fontSize: 12, fontWeight: 500, cursor: "pointer",
+          border: "1px solid", transition: "all 80ms", fontFamily: "inherit",
+          background: value ? "var(--accent-bg)" : "transparent",
+          color: value ? "var(--accent)" : "var(--fg-4)",
+          borderColor: value ? "var(--accent-line)" : "var(--line)",
+        }}
       >
         <CalendarIcon size={13} />
         {label}
@@ -65,10 +67,16 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
         <PopoverPrimitive.Content
           sideOffset={6}
           align="start"
-          className="z-50 bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3"
+          style={{
+            zIndex: 50, background: "var(--bg-2)", border: "1px solid var(--line)",
+            borderRadius: "var(--r-3)", padding: 12,
+            boxShadow: "0 12px 40px oklch(0 0 0 / 0.4)",
+          }}
         >
-          <div className="flex items-center justify-between mb-3">
+          {/* Month navigation */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <button
+              className="btn-icon"
               onClick={() =>
                 setMonth((m) => {
                   const d = new Date(m);
@@ -76,21 +84,20 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                   return d;
                 })
               }
-              className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+              style={{ fontSize: 18 }}
             >
               ‹
             </button>
             <button
               onClick={handleMonthClick}
-              className="text-sm font-medium text-white hover:text-violet-300 transition-colors px-2 py-1 rounded-lg hover:bg-violet-500/10"
+              className="btn btn-ghost"
+              style={{ fontSize: 13, padding: "3px 8px", height: "auto" }}
               title="Click to select entire month"
             >
-              {new Intl.DateTimeFormat("en-US", {
-                month: "long",
-                year: "numeric",
-              }).format(month)}
+              {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(month)}
             </button>
             <button
+              className="btn-icon"
               onClick={() =>
                 setMonth((m) => {
                   const d = new Date(m);
@@ -98,7 +105,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                   return d;
                 })
               }
-              className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
+              style={{ fontSize: 18 }}
             >
               ›
             </button>
@@ -131,7 +138,13 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
           {value && (
             <button
               onClick={() => onChange(null)}
-              className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+              style={{
+                marginTop: 6, width: "100%", padding: "5px 0", borderRadius: "var(--r-2)",
+                fontSize: 12, color: "var(--fg-4)", background: "none", border: "none",
+                cursor: "pointer", fontFamily: "inherit", transition: "80ms",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--fg-2)"; e.currentTarget.style.background = "var(--bg-3)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--fg-4)"; e.currentTarget.style.background = "none"; }}
             >
               Clear filter
             </button>

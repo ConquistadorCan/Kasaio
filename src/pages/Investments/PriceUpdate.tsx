@@ -4,7 +4,7 @@ import { assetPricesApi } from "../../api/assetPrices";
 import { logError } from "../../lib/logger";
 import { ApiError } from "../../lib/api";
 import { formatCurrency, formatDate } from "../../lib/formatters";
-import { cn } from "../../lib/utils";
+import { PageHeader } from "../../components/ui/primitives";
 import type { Asset } from "../../types/investments";
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -18,8 +18,6 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
 function currencySymbol(currency: string | undefined) {
   return currency === "USD" ? "$" : "₺";
 }
-
-// ─── Asset Price Row ──────────────────────────────────────────────────────────
 
 interface AssetRowProps {
   asset: Asset;
@@ -56,56 +54,47 @@ function AssetPriceRow({ asset, latestPrice, onSave }: AssetRowProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2 p-4 border-b border-white/5 last:border-0">
-      <div className="flex items-center justify-between">
+    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--line-soft)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
-          <p className="text-sm font-medium text-white">{asset.name}</p>
-          <p className="text-xs text-white/30">{asset.symbol} · {asset.currency}</p>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{asset.name}</p>
+          <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 2 }}>{asset.symbol} · {asset.currency}</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-mono text-white">
+        <div style={{ textAlign: "right" }}>
+          <p className="num" style={{ fontSize: 13, color: "var(--fg)" }}>
             {latestPrice ? `${sym}${formatCurrency(latestPrice.price)}` : "—"}
           </p>
           {latestPrice && (
-            <p className="text-xs text-white/30">{formatDate(latestPrice.recorded_at)}</p>
+            <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 2 }}>{formatDate(latestPrice.recorded_at)}</p>
           )}
         </div>
       </div>
 
-      <div className="flex gap-2 items-start">
-        <div className="flex-1 min-w-0">
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <input
             type="number"
             value={price}
             onChange={(e) => { setPrice(e.target.value); setPriceError(""); setSubmitError(""); }}
             placeholder={`New price (${sym})`}
             min="0"
-            className={cn(
-              "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors font-mono",
-              priceError ? "border-red-500/40" : "border-white/[0.08] focus:border-violet-500/50"
-            )}
+            style={{ width: "100%", borderColor: priceError ? "var(--danger)" : undefined }}
           />
-          {priceError && <p className="text-xs text-red-400 mt-1">{priceError}</p>}
-          {submitError && <p className="text-xs text-red-400 mt-1">{submitError}</p>}
+          {priceError && <p style={{ fontSize: 11.5, color: "var(--danger)", marginTop: 4 }}>{priceError}</p>}
+          {submitError && <p style={{ fontSize: 11.5, color: "var(--danger)", marginTop: 4 }}>{submitError}</p>}
         </div>
         <button
           onClick={handleSave}
           disabled={saving || !price}
-          className={cn(
-            "shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40",
-            justSaved
-              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
-              : "bg-violet-600 text-white hover:bg-violet-500"
-          )}
+          className={justSaved ? "btn btn-ghost" : "btn btn-primary"}
+          style={justSaved ? { color: "var(--success)", borderColor: "oklch(0.78 0.15 155 / 0.3)" } : undefined}
         >
-          {saving ? "Saving..." : justSaved ? "Saved ✓" : "Save"}
+          {saving ? "Saving…" : justSaved ? "Saved ✓" : "Save"}
         </button>
       </div>
     </div>
   );
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function PriceUpdate() {
   const { assets, latestPrices, setLatestPrice } = useInvestmentStore();
@@ -154,16 +143,16 @@ export function PriceUpdate() {
   }, {});
 
   return (
-    <div className="flex flex-col gap-5 h-full overflow-y-auto pb-6">
-      <div>
-        <h1 className="text-xl font-semibold text-white">Price Update</h1>
-        <p className="text-sm text-white/40 mt-0.5">Manually update asset prices</p>
-      </div>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", paddingBottom: 24 }}>
+      <PageHeader
+        title="Price Update"
+        meta="Manually update asset prices"
+      />
 
       {Object.entries(groupedAssets).map(([type, typeAssets]) => (
-        <div key={type} className="bg-[#0e0e18] border border-white/5 rounded-xl">
-          <div className="px-5 py-3.5 border-b border-white/5">
-            <p className="text-sm font-semibold text-white">
+        <div key={type} className="surface" style={{ overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--line-soft)" }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>
               {ASSET_TYPE_LABELS[type] ?? type}
             </p>
           </div>

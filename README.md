@@ -46,6 +46,8 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
 - [Node.js](https://nodejs.org) (LTS) — for the frontend build toolchain and the `npm` scripts
 - [Python](https://python.org) 3.11 — for the FastAPI backend
 
+On Linux, Tauri also requires native WebKit/GTK build dependencies. See the Tauri prerequisites for your distribution if `npm run tauri dev` fails during native compilation.
+
 ### Setup
 
 1. Clone the repository
@@ -65,10 +67,16 @@ Kasaio is a [Tauri](https://tauri.app) desktop application with three distinct l
 
    ```bash
    cd src-backend
-   python -m venv venv
-   venv\Scripts\activate
+   python -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    cd ..
+   ```
+
+   On Windows, activate the environment with:
+
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
    ```
 
 ### Running in Development Mode

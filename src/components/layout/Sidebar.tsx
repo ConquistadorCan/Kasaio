@@ -1,235 +1,260 @@
-import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { getVersion } from "@tauri-apps/api/app";
-import logoNobg from "../../assets/logo-nobg.png";
 import {
-  LayoutDashboard,
-  ArrowLeftRight,
-  Tag,
-  TrendingUp,
-  ChevronDown,
-  ChevronRight,
-  Wallet,
-  PanelLeftClose,
-  PanelLeftOpen,
-  BarChart2,
-  Gem,
-  Bitcoin,
-  Receipt,
-  RefreshCw,
-  LineChart,
-  Landmark,
-  ShieldCheck,
-  type LucideIcon,
+  LayoutDashboard, ArrowLeftRight, Sparkles,
+  BarChart2, Landmark, ShieldCheck, Settings,
+  PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { useUIStore } from "../../store/useUIStore";
 
-interface NavItem {
-  label: string;
-  path: string;
-  icon: LucideIcon;
-}
-
-interface TopLevelNav {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  enabled: boolean;
-  path?: string;
-  items?: NavItem[];
-}
-
-interface SidebarProps {
-  open: boolean;
-  onToggle: () => void;
-}
-
-const NAV_ITEMS: TopLevelNav[] = [
+const NAV = [
+  { kind: "item" as const, label: "Dashboard", path: "/dashboard", Icon: LayoutDashboard },
   {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    enabled: true,
-    path: "/dashboard",
-  },
-  {
-    id: "cash-flow",
-    label: "Cash Flow",
-    icon: Wallet,
-    enabled: true,
-    items: [
-      { label: "Transactions", path: "/cash-flow/transactions", icon: ArrowLeftRight },
-      { label: "Categories", path: "/cash-flow/categories", icon: Tag },
+    kind: "group" as const, label: "Activity", items: [
+      { label: "Transactions", path: "/cash-flow/transactions", Icon: ArrowLeftRight },
+      { label: "Insights",     path: "/insights",               Icon: Sparkles },
     ],
   },
   {
-    id: "investments",
-    label: "Investments",
-    icon: TrendingUp,
-    enabled: true,
-    items: [
-      { label: "Portfolio", path: "/investments/portfolio", icon: BarChart2 },
-      { label: "Commodities", path: "/investments/commodities", icon: Gem },
-      { label: "Cryptocurrencies", path: "/investments/crypto", icon: Bitcoin },
-      { label: "TEFAS Funds", path: "/investments/tefas-funds", icon: TrendingUp },
-      { label: "ETFs", path: "/investments/etf", icon: LineChart },
-      { label: "Eurobonds", path: "/investments/eurobond", icon: Landmark },
-      { label: "BES", path: "/investments/bes", icon: ShieldCheck },
-      { label: "Transactions", path: "/investments/transactions", icon: Receipt },
-      { label: "Price Update", path: "/investments/price-update", icon: RefreshCw },
+    kind: "group" as const, label: "Portfolio", items: [
+      { label: "Holdings", path: "/investments/portfolio", Icon: BarChart2 },
+      { label: "Bonds",    path: "/investments/eurobond",  Icon: Landmark },
+      { label: "Pension",  path: "/investments/bes",       Icon: ShieldCheck },
     ],
   },
 ];
 
-export function Sidebar({ open, onToggle }: SidebarProps) {
-  const [openGroups, setOpenGroups] = useState<string[]>(["cash-flow", "investments"]);
-  const [version, setVersion] = useState<string>("");
+export function Sidebar() {
+  const { sidebarOpen, setSidebarOpen, walletView, setWalletView, setSettingsOpen } = useUIStore();
+  const open = sidebarOpen;
+  const W = open ? 220 : 56;
 
-  useEffect(() => {
-    getVersion().then(setVersion);
-  }, []);
-
-  function toggleGroup(id: string) {
-    setOpenGroups((prev) =>
-      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
-    );
-  }
+  const itemBase: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 10,
+    padding: open ? "6px 10px" : "8px 0",
+    justifyContent: open ? "flex-start" : "center",
+    borderRadius: 6, fontSize: 12.5, fontWeight: 500,
+    cursor: "pointer", userSelect: "none", transition: "80ms",
+    border: "1px solid transparent",
+    background: "transparent",
+    color: "var(--fg-2)",
+    fontFamily: "inherit",
+    width: "100%", textAlign: "left",
+  };
 
   return (
-    <aside
-      className={cn(
-        "shrink-0 flex flex-col h-full bg-[#0d0d14] border-r border-white/5 overflow-hidden transition-all duration-300 ease-in-out",
-        open ? "w-56" : "w-12"
-      )}
-    >
-      {/* Header */}
-      <div className="px-3 py-4 border-b border-white/5 flex items-center justify-between min-w-0">
-        <div className={cn(
-          "flex items-center gap-2 transition-all duration-300 overflow-hidden",
-          open ? "opacity-100 w-auto" : "opacity-0 w-0"
-        )}>
-          <img src={logoNobg} alt="Kasaio" className="w-6 h-6 shrink-0 object-contain" />
-          <span className="text-lg font-semibold tracking-tight text-white whitespace-nowrap">
-            kasa<span className="text-violet-400">io</span>
-          </span>
-        </div>
-        <button
-          onClick={onToggle}
-          className="shrink-0 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          {open ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-        </button>
+    <aside style={{
+      width: W, flexShrink: 0, height: "100%",
+      background: "var(--bg-0)",
+      borderRight: "1px solid var(--line)",
+      display: "flex", flexDirection: "column",
+      transition: "width 200ms ease",
+      overflow: "hidden",
+      position: "relative", zIndex: 5,
+    }}>
+      {/* Brand + collapse */}
+      <div style={{
+        height: 48,
+        padding: open ? "0 8px 0 14px" : "0",
+        display: "flex", alignItems: "center",
+        justifyContent: open ? "space-between" : "center",
+        borderBottom: "1px solid var(--line)",
+        flexShrink: 0,
+      }}>
+        {open ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <BrandMark />
+              <span style={{ fontSize: 14.5, fontWeight: 600, letterSpacing: "-0.015em", whiteSpace: "nowrap" }}>
+                Kasa<span style={{ color: "var(--accent-2)" }}>io</span>
+              </span>
+            </div>
+            <button
+              className="btn-icon"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Collapse sidebar"
+            >
+              <PanelLeftClose size={14} />
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-icon"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Expand sidebar"
+            style={{ padding: 0, width: 30, height: 30, justifyContent: "center" }}
+          >
+            <BrandMark />
+          </button>
+        )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 py-4 px-1.5 flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isOpen = openGroups.includes(item.id);
+      {/* Wallet selector */}
+      {open ? (
+        <div style={{ padding: "12px 10px 8px", flexShrink: 0 }}>
+          <div className="mono" style={{
+            fontSize: 9.5, color: "var(--fg-4)",
+            textTransform: "uppercase", letterSpacing: "0.08em",
+            padding: "0 4px 6px",
+          }}>
+            Account
+          </div>
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4,
+            padding: 2,
+            background: "var(--bg-1)",
+            border: "1px solid var(--line)",
+            borderRadius: 6,
+          }}>
+            {(["TRY", "USD"] as const).map((w) => (
+              <button
+                key={w}
+                onClick={() => setWalletView(w)}
+                style={{
+                  border: 0, cursor: "pointer", padding: "5px 0",
+                  fontSize: 11.5, fontWeight: 600, borderRadius: 4,
+                  color: walletView === w ? "var(--fg)" : "var(--fg-3)",
+                  background: walletView === w ? "var(--bg-3)" : "transparent",
+                  fontFamily: "inherit",
+                  transition: "80ms",
+                }}
+              >
+                <span className="mono" style={{ marginRight: 4 }}>{w === "TRY" ? "₺" : "$"}</span>{w}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "12px 0", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <button
+            onClick={() => setWalletView(walletView === "TRY" ? "USD" : "TRY")}
+            title={`Switch to ${walletView === "TRY" ? "USD" : "TRY"}`}
+            className="mono"
+            style={{
+              fontSize: 11, fontWeight: 600,
+              width: 30, height: 22, borderRadius: 4,
+              background: "var(--bg-2)", border: "1px solid var(--line)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "var(--accent-2)", cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            {walletView === "TRY" ? "₺" : "$"}
+          </button>
+        </div>
+      )}
 
-          if (item.path) {
+      {/* Nav */}
+      <nav style={{
+        flex: 1, overflowY: "auto", overflowX: "hidden",
+        padding: "4px 6px 12px",
+        display: "flex", flexDirection: "column", gap: 1,
+      }}>
+        {NAV.map((item, idx) => {
+          if (item.kind === "item") {
+            const { Icon, label, path } = item;
             return (
               <NavLink
-                key={item.id}
-                to={item.path}
-                title={!open ? item.label : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-violet-500/15 text-violet-300"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
-                  )
-                }
+                key={path}
+                to={path}
+                title={!open ? label : undefined}
+                style={({ isActive }) => ({
+                  ...itemBase,
+                  background: isActive ? "var(--accent-bg)" : "transparent",
+                  color: isActive ? "var(--accent-2)" : "var(--fg-2)",
+                  borderColor: isActive ? "var(--accent-line)" : "transparent",
+                  textDecoration: "none",
+                })}
               >
-                <Icon size={15} className="shrink-0" />
-                <span
-                  className={cn(
-                    "overflow-hidden whitespace-nowrap transition-all duration-300",
-                    open ? "opacity-100 w-auto" : "opacity-0 w-0"
-                  )}
-                >
-                  {item.label}
-                </span>
+                <Icon size={15} style={{ flexShrink: 0 }} />
+                {open && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
               </NavLink>
             );
           }
 
           return (
-            <div key={item.id}>
-              <button
-                onClick={() => item.enabled && (open ? toggleGroup(item.id) : null)}
-                disabled={!item.enabled}
-                title={!open ? item.label : undefined}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors",
-                  item.enabled
-                    ? "text-white/60 hover:text-white hover:bg-white/5 cursor-pointer"
-                    : "text-white/20 cursor-not-allowed"
-                )}
-              >
-                <Icon size={15} className="shrink-0" />
-                <span
-                  className={cn(
-                    "flex-1 text-left overflow-hidden whitespace-nowrap transition-all duration-300",
-                    open ? "opacity-100 w-auto" : "opacity-0 w-0"
-                  )}
-                >
+            <div key={idx} style={{ marginTop: 10 }}>
+              {open ? (
+                <div className="mono" style={{
+                  fontSize: 9, color: "var(--fg-5)",
+                  textTransform: "uppercase", letterSpacing: "0.12em",
+                  padding: "4px 12px 6px",
+                }}>
                   {item.label}
-                </span>
-                {open && item.enabled && (
-                  isOpen ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />
-                )}
-                {open && !item.enabled && (
-                  <span className="text-[10px] bg-white/5 text-white/25 px-1.5 py-0.5 rounded-full shrink-0">
-                    soon
-                  </span>
-                )}
-              </button>
-
-              {open && item.enabled && isOpen && item.items && (
-                <div
-                  className="mt-0.5 flex flex-col gap-0.5 border-l border-white/5"
-                  style={{ marginLeft: "0.75rem", paddingLeft: "0.5rem" }}
-                >
-                  {item.items.map((sub) => {
-                    const SubIcon = sub.icon;
-                    return (
-                      <NavLink
-                        key={sub.path}
-                        to={sub.path}
-                        className={({ isActive }) =>
-                          cn(
-                            "flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors",
-                            isActive
-                              ? "bg-violet-500/15 text-violet-300 font-medium"
-                              : "text-white/50 hover:text-white/80 hover:bg-white/5"
-                          )
-                        }
-                      >
-                        <SubIcon size={14} className="shrink-0" />
-                        {sub.label}
-                      </NavLink>
-                    );
-                  })}
                 </div>
+              ) : (
+                <div style={{ height: 1, background: "var(--line)", margin: "8px 12px" }} />
               )}
+              {item.items.map(({ label, path, Icon }) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  title={!open ? label : undefined}
+                  style={({ isActive }) => ({
+                    ...itemBase,
+                    background: isActive ? "var(--accent-bg)" : "transparent",
+                    color: isActive ? "var(--accent-2)" : "var(--fg-2)",
+                    borderColor: isActive ? "var(--accent-line)" : "transparent",
+                    textDecoration: "none",
+                  })}
+                >
+                  <Icon size={14} style={{ flexShrink: 0 }} />
+                  {open && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
+                </NavLink>
+              ))}
             </div>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-4 border-t border-white/5">
-        <span
-          className={cn(
-            "text-xs text-white/20 overflow-hidden whitespace-nowrap transition-all duration-300",
-            open ? "opacity-100" : "opacity-0"
-          )}
-        >
-          v{version}
-        </span>
+      <div style={{
+        padding: "8px",
+        borderTop: "1px solid var(--line)",
+        display: "flex", alignItems: "center", gap: 6,
+        flexShrink: 0,
+      }}>
+        {open ? (
+          <>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              style={{
+                ...itemBase, flex: 1,
+                color: "var(--fg-3)", padding: "6px 10px",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-2)"; e.currentTarget.style.color = "var(--fg)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--fg-3)"; }}
+            >
+              <Settings size={14} />
+              <span>Settings</span>
+            </button>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 6px" }}>
+              <span className="dot" style={{ background: "var(--success)" }} />
+            </span>
+          </>
+        ) : (
+          <button
+            className="btn-icon"
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+            style={{ margin: "0 auto" }}
+          >
+            <Settings size={14} />
+          </button>
+        )}
       </div>
     </aside>
+  );
+}
+
+function BrandMark() {
+  return (
+    <div style={{
+      width: 22, height: 22, borderRadius: 5,
+      background: "linear-gradient(140deg, var(--accent) 0%, oklch(0.55 0.16 240) 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 11, fontWeight: 700, color: "oklch(0.15 0.02 250)",
+      flexShrink: 0,
+    }}>
+      K
+    </div>
   );
 }

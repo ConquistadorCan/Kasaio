@@ -1,4 +1,3 @@
-import { cn } from "../../lib/utils";
 import { DateRangePicker, type DateRange } from "./DateRangePicker";
 import type { FilterType } from "./types";
 
@@ -16,18 +15,28 @@ export function TransactionFilters({
   onDateRangeChange,
 }: TransactionFiltersProps) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex gap-1 bg-white/5 p-1 rounded-lg w-fit">
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        display: "flex", gap: 2,
+        background: "var(--bg-1)", border: "1px solid var(--line-soft)",
+        borderRadius: "var(--r-2)", padding: 3,
+      }}>
         {(["all", "income", "expense"] as FilterType[]).map((f) => (
           <button
             key={f}
             onClick={() => onFilterChange(f)}
-            className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors capitalize",
-              filter === f
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/70",
-            )}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "var(--r-1)",
+              fontSize: 12,
+              fontWeight: 500,
+              border: "none",
+              cursor: "pointer",
+              transition: "all 80ms",
+              textTransform: "capitalize",
+              background: filter === f ? "var(--bg-3)" : "transparent",
+              color: filter === f ? "var(--fg)" : "var(--fg-4)",
+            }}
           >
             {f}
           </button>

@@ -7,7 +7,6 @@ import { logError } from "../lib/logger";
 import { ErrorBanner } from "../components/ui/ErrorComponents";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import type { Category } from "../types";
-import { cn } from "../lib/utils";
 
 interface CategoryFormData {
   name: string;
@@ -46,52 +45,44 @@ function CategoryModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-        <h2 className="text-base font-semibold text-white mb-5">
-          {mode === "add" ? "Add Category" : "Edit Category"}
-        </h2>
-
-        <div>
-          <label className="block text-xs font-medium text-white/50 mb-1.5">
-            Name
-          </label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => {
-              setForm({ name: e.target.value });
-              setFieldError("");
-              setSubmitError("");
-            }}
-            placeholder="e.g. Food & Drink"
-            className={cn(
-              "w-full bg-white/5 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 outline-none transition-colors",
-              fieldError
-                ? "border-red-500/40 focus:border-red-500/60"
-                : "border-white/[0.08] focus:border-violet-500/50",
-            )}
-          />
-          {fieldError && (
-            <p className="text-xs text-red-400 mt-1">{fieldError}</p>
-          )}
-          {submitError && <ErrorBanner message={submitError} />}
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 60,
+      background: "oklch(0 0 0 / 0.55)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        width: 380, background: "var(--bg-2)", border: "1px solid var(--line-strong)",
+        borderRadius: 10, boxShadow: "0 20px 60px oklch(0 0 0 / 0.5)",
+      }}>
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)" }}>
+          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>
+            {mode === "add" ? "Add Category" : "Edit Category"}
+          </h2>
         </div>
-
-        <div className="flex gap-2 mt-6">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
-          >
-            {loading ? "Saving..." : "Save"}
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+              Name
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => {
+                setForm({ name: e.target.value });
+                setFieldError("");
+                setSubmitError("");
+              }}
+              placeholder="e.g. Food & Drink"
+              style={{ width: "100%", borderColor: fieldError ? "var(--danger)" : undefined }}
+            />
+            {fieldError && <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "var(--danger)" }}>{fieldError}</p>}
+            {submitError && <ErrorBanner message={submitError} />}
+          </div>
+        </div>
+        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--line)", display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button className="btn btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -99,7 +90,11 @@ function CategoryModal({
   );
 }
 
-export function Categories() {
+interface CategoriesProps {
+  embedded?: boolean;
+}
+
+export function Categories({ embedded = false }: CategoriesProps) {
   const { categories, addCategory, updateCategory, deleteCategory } =
     useAppStore();
   const [showModal, setShowModal] = useState(false);
@@ -153,54 +148,72 @@ export function Categories() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Categories</h1>
-          <p className="text-sm text-white/40 mt-0.5">
-            {categories.length} total
-          </p>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 16, padding: embedded ? "16px 20px" : 0 }}>
+      {!embedded && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: "-0.015em", color: "var(--fg)" }}>Categories</h1>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--fg-4)" }}>{categories.length} total</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> Add Category
+          </button>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          Add Category
-        </button>
-      </div>
+      )}
+
+      {embedded && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Categories</span>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={13} /> Add
+          </button>
+        </div>
+      )}
 
       {categories.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center bg-[#0e0e18] border border-white/5 rounded-xl">
-          <p className="text-sm text-white/20">No categories yet</p>
+        <div style={{
+          flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+          background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8,
+        }}>
+          <p style={{ fontSize: 12.5, color: "var(--fg-4)" }}>No categories yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 content-start overflow-y-auto flex-1">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, overflowY: "auto", flex: 1, alignContent: "start" }}>
           {categories.map((category) => {
             const isSystem = SYSTEM_CATEGORY_NAMES.has(category.name);
             return (
               <div
                 key={category.id}
-                className="flex items-center justify-between bg-[#0e0e18] border border-white/5 rounded-xl px-4 py-3.5 hover:border-white/10 transition-colors group"
+                className="group"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "var(--bg-2)", border: "1px solid var(--line)",
+                  borderRadius: 8, padding: "10px 12px",
+                  transition: "border-color 80ms",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--line-strong)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--line)")}
               >
-                <span className="text-sm text-white font-medium">
+                <span style={{ fontSize: 12.5, color: "var(--fg)", fontWeight: 500 }}>
                   {category.name}
                 </span>
                 {isSystem ? (
-                  <Lock size={13} className="text-white/20 shrink-0" />
+                  <Lock size={13} style={{ color: "var(--fg-5)", flexShrink: 0 }} />
                 ) : (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="opacity-0 group-hover:opacity-100" style={{ display: "flex", alignItems: "center", gap: 2, transition: "opacity 80ms" }}>
                     <button
                       onClick={() => setEditing(category)}
-                      className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                      className="btn-icon"
+                      style={{ width: 24, height: 24 }}
                     >
-                      <Pencil size={13} />
+                      <Pencil size={12} />
                     </button>
                     <button
                       onClick={() => setConfirmId(category.id)}
-                      className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="btn-icon"
+                      style={{ width: 24, height: 24, color: "var(--danger)" }}
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 )}

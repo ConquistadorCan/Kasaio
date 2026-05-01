@@ -8,9 +8,11 @@ import { logError } from "../../lib/logger";
 import { TransactionModal } from "../../components/transactions/TransactionModal";
 import { TransactionTable } from "../../components/transactions/TransactionTable";
 import { TransactionFilters } from "../../components/transactions/TransactionFilters";
+import { PageHeader } from "../../components/ui/primitives";
 import { type FilterType, type TransactionFormData, type CashFlowRow } from "../../components/transactions/types";
 import { type DateRange } from "../../components/transactions/DateRangePicker";
 import type { Transaction } from "../../types";
+
 export function Transactions() {
   const { transactions, categories, addTransaction, updateTransaction, deleteTransaction } =
     useAppStore();
@@ -137,20 +139,16 @@ export function Transactions() {
     : undefined;
 
   return (
-    <div className="flex flex-col h-full gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Transactions</h1>
-          <p className="text-sm text-white/40 mt-0.5">{transactions.length + investmentTransactions.length} total</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          Add Transaction
-        </button>
-      </div>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
+      <PageHeader
+        title="Transactions"
+        meta={`${transactions.length + investmentTransactions.length} total`}
+        actions={
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> Add Transaction
+          </button>
+        }
+      />
 
       <TransactionFilters
         filter={filter}

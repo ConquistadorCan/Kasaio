@@ -205,7 +205,20 @@ mod dev {
             .expect("workspace root not found")
             .join("src-backend");
 
-        let python_exe = backend_dir.join("venv").join("Scripts").join("python.exe");
+        let python_exe = [".venv", "venv"]
+            .iter()
+            .map(|venv_dir| {
+                let bin_dir = if cfg!(windows) { "Scripts" } else { "bin" };
+                let executable = if cfg!(windows) { "python.exe" } else { "python" };
+                backend_dir.join(venv_dir).join(bin_dir).join(executable)
+            })
+            .find(|path| path.exists())
+            .ok_or_else(|| {
+                format!(
+                    "Python virtual environment not found in {}. Create src-backend/.venv or src-backend/venv first.",
+                    backend_dir.display()
+                )
+            })?;
         let main_py = backend_dir.join("main.py");
 
         let mut child = std::process::Command::new(&python_exe)

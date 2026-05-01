@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { portfolioApi } from "../../api/portfolioApi";
 import { useInvestmentStore } from "../../store/useInvestmentStore";
 import { useBESStore } from "../../store/useBESStore";
 import { formatCurrency, formatDate } from "../../lib/formatters";
 import { logError } from "../../lib/logger";
 import { LoadingState, ErrorState } from "../../components/ui/ErrorComponents";
-import { cn } from "../../lib/utils";
+import { PageHeader } from "../../components/ui/primitives";
 import type { PortfolioSummary } from "../../types/investments";
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -17,6 +17,18 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
   ETF: "ETF",
   EUROBOND: "Eurobond",
 };
+
+const FILTER_CHIPS = [
+  { label: "All", path: "/investments/portfolio" },
+  { label: "Commodities", path: "/investments/commodities" },
+  { label: "Crypto", path: "/investments/crypto" },
+  { label: "TEFAS", path: "/investments/tefas-funds" },
+  { label: "ETF", path: "/investments/etf" },
+];
+
+const COLS = "1fr 80px 80px 100px 120px 120px 130px";
+const CLOSED_COLS = "1fr 80px 80px 160px";
+const BES_COLS = "1fr 130px 130px 130px";
 
 function currencySymbol(currency: string) {
   return currency === "USD" ? "$" : "₺";
@@ -49,11 +61,45 @@ export function InvestmentsPortfolio() {
     fetchSummary();
   }, [fetchSummary]);
 
+  const activeCount = summary?.holdings.filter((h) => h.quantity > 0).length ?? 0;
+
   return (
-    <div className="flex flex-col gap-6 h-full overflow-y-auto pb-6">
-      <div>
-        <h1 className="text-xl font-semibold text-white">Portfolio</h1>
-        <p className="text-sm text-white/40 mt-0.5">{summary?.holdings.filter((h) => h.quantity > 0).length ?? 0} positions</p>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title="Holdings"
+        meta={`${activeCount} positions`}
+        actions={
+          <button className="btn btn-ghost" onClick={() => navigate("/investments/price-update")}>
+            <RefreshCw size={13} /> Update Prices
+          </button>
+        }
+      />
+
+      {/* Filter chips */}
+      <div style={{ display: "flex", gap: 6 }}>
+        {FILTER_CHIPS.map((chip) => {
+          const isActive = chip.path === "/investments/portfolio";
+          return (
+            <button
+              key={chip.path}
+              onClick={() => navigate(chip.path)}
+              style={{
+                padding: "5px 12px",
+                borderRadius: "var(--r-2)",
+                fontSize: 12,
+                fontWeight: 500,
+                border: "1px solid",
+                transition: "all 80ms",
+                borderColor: isActive ? "var(--accent-line)" : "var(--line)",
+                background: isActive ? "var(--accent-bg)" : "transparent",
+                color: isActive ? "var(--accent-2)" : "var(--fg-4)",
+                cursor: "pointer",
+              }}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
@@ -63,18 +109,19 @@ export function InvestmentsPortfolio() {
       ) : (
         <>
           {/* Holdings table */}
-          <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_80px_80px_100px_120px_120px_130px] px-5 py-3 border-b border-white/5">
+          <div className="surface" style={{ overflow: "hidden" }}>
+            <div
+              className="table-head"
+              style={{ gridTemplateColumns: COLS }}
+            >
               {["Asset", "Type", "CCY", "Qty", "Avg Cost", "Value", "P&L"].map((col) => (
-                <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
-                  {col}
-                </span>
+                <span key={col}>{col}</span>
               ))}
             </div>
 
             {!summary || summary.holdings.filter((h) => h.quantity > 0).length === 0 ? (
-              <div className="flex items-center justify-center py-16">
-                <p className="text-sm text-white/20">No positions yet</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 20px" }}>
+                <p style={{ fontSize: 13, color: "var(--fg-5)" }}>No positions yet</p>
               </div>
             ) : (
               summary.holdings.filter((h) => h.quantity > 0).map((h) => {
@@ -89,37 +136,40 @@ export function InvestmentsPortfolio() {
                 return (
                   <div
                     key={h.asset.id}
-                    className="grid grid-cols-[1fr_80px_80px_100px_120px_120px_130px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                    className="table-row"
+                    style={{ gridTemplateColumns: COLS }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                   >
                     <div>
-                      <p className="text-sm font-medium text-white">{h.asset.name}</p>
-                      <p className="text-xs text-white/30 mt-0.5">{h.asset.symbol}</p>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{h.asset.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{h.asset.symbol}</p>
                     </div>
-                    <span className="text-xs text-white/40">
+                    <span style={{ fontSize: 11.5, color: "var(--fg-4)" }}>
                       {ASSET_TYPE_LABELS[h.asset.asset_type] ?? h.asset.asset_type}
                     </span>
-                    <span className="text-xs text-white/40 font-mono">{h.asset.currency}</span>
-                    <span className="text-sm text-white/70 font-mono">{h.quantity.toFixed(2)}</span>
-                    <span className="text-sm text-white/70 font-mono">
+                    <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{h.asset.currency}</span>
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{h.quantity.toFixed(2)}</span>
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>
                       {sym}{formatCurrency(h.average_cost)}
                     </span>
-                    <span className="text-sm text-white font-mono">
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>
                       {h.current_value != null ? `${sym}${formatCurrency(h.current_value)}` : "—"}
                     </span>
                     <div>
                       {pnl != null ? (
                         <>
-                          <p className={cn("text-sm font-mono font-medium", isProfit ? "text-emerald-400" : "text-red-400")}>
+                          <p className="num" style={{ fontSize: 13, fontWeight: 500, color: isProfit ? "var(--success)" : "var(--danger)" }}>
                             {isProfit ? "+" : ""}{sym}{formatCurrency(Math.abs(pnl))}
                           </p>
                           {pnlPct != null && (
-                            <p className={cn("text-xs font-mono mt-0.5", isProfit ? "text-emerald-400/60" : "text-red-400/60")}>
+                            <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: isProfit ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                               {isProfit ? "+" : ""}{pnlPct.toFixed(2)}%
                             </p>
                           )}
                         </>
                       ) : (
-                        <span className="text-sm text-white/20">—</span>
+                        <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                       )}
                     </div>
                   </div>
@@ -136,16 +186,16 @@ export function InvestmentsPortfolio() {
               <div>
                 <button
                   onClick={() => setShowClosed((p) => !p)}
-                  className="flex items-center gap-2 text-sm text-white/30 hover:text-white/50 transition-colors"
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 >
-                  <ChevronDown size={14} className={cn("transition-transform", showClosed && "rotate-180")} />
+                  <ChevronDown size={14} style={{ transform: showClosed ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
                   Closed Positions ({closed.length})
                 </button>
                 {showClosed && (
-                  <div className="mt-2 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_80px_80px_160px] px-5 py-3 border-b border-white/5">
+                  <div className="surface" style={{ overflow: "hidden", marginTop: 8 }}>
+                    <div className="table-head" style={{ gridTemplateColumns: CLOSED_COLS }}>
                       {["Asset", "Type", "CCY", "Realized P&L"].map((col) => (
-                        <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
+                        <span key={col}>{col}</span>
                       ))}
                     </div>
                     {closed.map((h) => {
@@ -160,21 +210,21 @@ export function InvestmentsPortfolio() {
                         .reduce((sum, t) => sum + t.quantity * t.price, 0);
                       const realizedPnlPct = totalInvested > 0 ? (realizedPnl / totalInvested) * 100 : null;
                       return (
-                        <div key={h.asset.id} className="grid grid-cols-[1fr_80px_80px_160px] px-5 py-4 border-b border-white/5 last:border-0 items-center">
+                        <div key={h.asset.id} className="table-row" style={{ gridTemplateColumns: CLOSED_COLS }}>
                           <div>
-                            <p className="text-sm font-medium text-white/50">{h.asset.name}</p>
-                            <p className="text-xs text-white/20 mt-0.5">{h.asset.symbol}</p>
+                            <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg-3)" }}>{h.asset.name}</p>
+                            <p style={{ fontSize: 11, color: "var(--fg-5)", marginTop: 1 }}>{h.asset.symbol}</p>
                           </div>
-                          <span className="text-xs text-white/30">
+                          <span style={{ fontSize: 11.5, color: "var(--fg-4)" }}>
                             {ASSET_TYPE_LABELS[h.asset.asset_type] ?? h.asset.asset_type}
                           </span>
-                          <span className="text-xs text-white/30 font-mono">{h.asset.currency}</span>
+                          <span className="mono" style={{ fontSize: 11.5, color: "var(--fg-4)" }}>{h.asset.currency}</span>
                           <div>
-                            <p className={cn("text-sm font-mono font-medium", isProfit ? "text-emerald-400" : "text-red-400")}>
+                            <p className="num" style={{ fontSize: 13, fontWeight: 500, color: isProfit ? "var(--success)" : "var(--danger)" }}>
                               {isProfit ? "+" : ""}{sym}{formatCurrency(Math.abs(realizedPnl))}
                             </p>
                             {realizedPnlPct !== null && (
-                              <p className={cn("text-xs font-mono mt-0.5", isProfit ? "text-emerald-400/60" : "text-red-400/60")}>
+                              <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: isProfit ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                                 {isProfit ? "+" : ""}{realizedPnlPct.toFixed(2)}%
                               </p>
                             )}
@@ -190,52 +240,60 @@ export function InvestmentsPortfolio() {
 
           {/* BES Plans */}
           {besPlans.length > 0 && (
-            <div className="bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-white/30 uppercase tracking-wider">BES Plans</span>
+            <div className="surface" style={{ overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--line-soft)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 10.5, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.07em" }}>BES Plans</span>
                 <button
                   onClick={() => navigate("/investments/bes")}
-                  className="flex items-center gap-1 text-xs text-white/30 hover:text-violet-400 transition-colors"
+                  style={{ fontSize: 11.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--accent-2)")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--fg-4)")}
                 >
-                  Manage <ArrowRight size={12} />
+                  Manage →
                 </button>
               </div>
-              <div className="grid grid-cols-[1fr_130px_130px_130px] px-5 py-3 border-b border-white/5">
+              <div className="table-head" style={{ gridTemplateColumns: BES_COLS }}>
                 {["Plan", "Total Paid", "Current Value", "P&L"].map((col) => (
-                  <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">{col}</span>
+                  <span key={col}>{col}</span>
                 ))}
               </div>
               {besPlans.map((plan) => (
-                <div key={plan.id} className="grid grid-cols-[1fr_130px_130px_130px] px-5 py-4 border-b border-white/5 last:border-0 items-center hover:bg-white/[0.02] transition-colors">
+                <div
+                  key={plan.id}
+                  className="table-row"
+                  style={{ gridTemplateColumns: BES_COLS }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                >
                   <div>
-                    <p className="text-sm font-medium text-white">{plan.name}</p>
-                    <p className="text-xs text-white/30 mt-0.5">{plan.company}</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{plan.name}</p>
+                    <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{plan.company}</p>
                   </div>
-                  <span className="text-sm text-white/70 font-mono">₺{formatCurrency(plan.total_paid)}</span>
+                  <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>₺{formatCurrency(plan.total_paid)}</span>
                   <div>
                     {plan.current_value !== null ? (
                       <>
-                        <span className="text-sm text-white font-mono">₺{formatCurrency(plan.current_value)}</span>
+                        <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>₺{formatCurrency(plan.current_value)}</span>
                         {plan.last_updated && (
-                          <p className="text-xs text-white/20 mt-0.5">{formatDate(plan.last_updated)}</p>
+                          <p style={{ fontSize: 10.5, color: "var(--fg-5)", marginTop: 1 }}>{formatDate(plan.last_updated)}</p>
                         )}
                       </>
                     ) : (
-                      <span className="text-sm text-white/20">—</span>
+                      <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                     )}
                   </div>
                   <div>
                     {plan.pnl !== null ? (
                       <>
-                        <p className={cn("text-sm font-mono font-medium", plan.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                        <p className="num" style={{ fontSize: 13, fontWeight: 500, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
                           {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
                         </p>
-                        <p className={cn("text-xs font-mono mt-0.5", plan.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                        <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                           {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
                         </p>
                       </>
                     ) : (
-                      <span className="text-sm text-white/20">—</span>
+                      <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                     )}
                   </div>
                 </div>
@@ -243,21 +301,22 @@ export function InvestmentsPortfolio() {
             </div>
           )}
 
-          {/* Quick links */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Update Prices", path: "/investments/price-update" },
-              { label: "View Transactions", path: "/investments/transactions" },
-            ].map(({ label, path }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                className="flex items-center justify-between px-4 py-3 bg-[#0e0e18] border border-white/5 rounded-xl text-sm text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
-              >
-                {label}
-                <ArrowRight size={14} />
-              </button>
-            ))}
+          {/* View transactions link */}
+          <div>
+            <button
+              onClick={() => navigate("/investments/transactions")}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 14px", background: "var(--bg-2)", border: "1px solid var(--line)",
+                borderRadius: "var(--r-3)", fontSize: 12.5, color: "var(--fg-4)",
+                cursor: "pointer", width: "100%", transition: "color 80ms, border-color 80ms",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--fg)"; e.currentTarget.style.borderColor = "var(--line-strong)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--fg-4)"; e.currentTarget.style.borderColor = "var(--line)"; }}
+            >
+              View Investment Transactions
+              <span style={{ fontSize: 14 }}>→</span>
+            </button>
           </div>
         </>
       )}

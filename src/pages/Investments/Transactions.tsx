@@ -9,8 +9,16 @@ import { LoadingState, ErrorState } from "../../components/ui/ErrorComponents";
 import { TransactionModal } from "../../components/investment/InvestmentTransactionModal";
 import { IncomeTransactionModal } from "../../components/investment/IncomeTransactionModal";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
-import { cn } from "../../lib/utils";
+import { PageHeader } from "../../components/ui/primitives";
 import type { InvestmentTransaction } from "../../types/investments";
+
+const COLS = "100px 1fr 80px 110px 110px 120px 64px";
+
+const TYPE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  BUY: { bg: "var(--success-bg)", color: "var(--success)", border: "oklch(0.78 0.15 155 / 0.25)" },
+  SELL: { bg: "var(--danger-bg)", color: "var(--danger)", border: "oklch(0.70 0.20 25 / 0.25)" },
+  INCOME: { bg: "var(--warning-bg)", color: "var(--warning)", border: "oklch(0.80 0.14 75 / 0.25)" },
+};
 
 export function InvestmentTransactions() {
   const { investmentTransactions, assets, holdings, setInvestmentTransactions, addInvestmentTransaction, updateInvestmentTransaction, removeInvestmentTransaction, refreshHolding, removeHolding } = useInvestmentStore();
@@ -52,10 +60,7 @@ export function InvestmentTransactions() {
   }): Promise<string | undefined> {
     setMutating(true);
     try {
-      const txn = await investmentTransactionsApi.create({
-        ...data,
-        date: new Date(data.date).toISOString(),
-      });
+      const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
       addInvestmentTransaction(txn);
       const updatedHolding = await holdingsApi.get(data.asset_id);
       refreshHolding(updatedHolding);
@@ -77,10 +82,7 @@ export function InvestmentTransactions() {
   }): Promise<string | undefined> {
     setMutating(true);
     try {
-      const txn = await investmentTransactionsApi.create({
-        ...data,
-        date: new Date(data.date).toISOString(),
-      });
+      const txn = await investmentTransactionsApi.create({ ...data, date: new Date(data.date).toISOString() });
       addInvestmentTransaction(txn);
       setShowIncomeModal(false);
     } catch (err) {
@@ -90,7 +92,6 @@ export function InvestmentTransactions() {
       setMutating(false);
     }
   }
-
 
   async function handleEdit(data: {
     asset_id: number;
@@ -171,145 +172,125 @@ export function InvestmentTransactions() {
       return sortOrder === "desc" ? -diff : diff;
     });
 
-  return (
-    <div className="flex flex-col h-full gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Investment Transactions</h1>
-          <p className="text-sm text-white/40 mt-0.5">{investmentTransactions.length} total</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowIncomeModal(true)}
-            className="flex items-center gap-2 bg-amber-600/80 hover:bg-amber-500/80 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            Record Income
-          </button>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={15} />
-            New Transaction
-          </button>
-        </div>
-      </div>
+  const filterBtnStyle = (active: boolean) => ({
+    padding: "4px 12px", borderRadius: "var(--r-1)", fontSize: 12,
+    fontWeight: 500, border: "none", cursor: "pointer", transition: "all 80ms",
+    background: active ? "var(--bg-3)" : "transparent",
+    color: active ? "var(--fg)" : "var(--fg-4)",
+  });
 
-      <div className="flex items-center gap-3">
+  return (
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
+      <PageHeader
+        title="Investment Transactions"
+        meta={`${investmentTransactions.length} total`}
+        actions={
+          <>
+            <button className="btn btn-ghost" onClick={() => setShowIncomeModal(true)}>
+              <Plus size={13} /> Record Income
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              <Plus size={13} /> New Transaction
+            </button>
+          </>
+        }
+      />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         {/* Type filter */}
-        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+        <div style={{ display: "flex", gap: 2, background: "var(--bg-1)", border: "1px solid var(--line-soft)", borderRadius: "var(--r-2)", padding: 3 }}>
           {(["all", "BUY", "SELL", "INCOME"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilterType(t)}
-              className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-                filterType === t ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-              )}
-            >
+            <button key={t} onClick={() => setFilterType(t)} style={filterBtnStyle(filterType === t)}>
               {t === "all" ? "All" : t}
             </button>
           ))}
         </div>
 
         {/* Asset filter */}
-        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
-          <button
-            onClick={() => setFilterAsset("all")}
-            className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              filterAsset === "all" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-            )}
-          >
-            All
-          </button>
-          {assets.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => setFilterAsset(a.id)}
-              className={cn(
-                "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-                filterAsset === a.id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
-              )}
-            >
-              {a.name}
-            </button>
-          ))}
-        </div>
+        {assets.length > 0 && (
+          <div style={{ display: "flex", gap: 2, background: "var(--bg-1)", border: "1px solid var(--line-soft)", borderRadius: "var(--r-2)", padding: 3 }}>
+            <button onClick={() => setFilterAsset("all")} style={filterBtnStyle(filterAsset === "all")}>All</button>
+            {assets.map((a) => (
+              <button key={a.id} onClick={() => setFilterAsset(a.id)} style={filterBtnStyle(filterAsset === a.id)}>
+                {a.symbol}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading ? (
         <LoadingState />
       ) : fetchError ? (
-        <ErrorState message={fetchError!} onRetry={fetchTransactions} />
+        <ErrorState message={fetchError} onRetry={fetchTransactions} />
       ) : (
-        <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-          <div className="grid grid-cols-[100px_1fr_80px_110px_110px_120px_64px] px-5 py-3 border-b border-white/5 shrink-0">
-            {["Date", "Asset", "Type", "Qty (g)", "Price", "Total", ""].map((col) =>
+        <div className="surface" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div className="table-head" style={{ gridTemplateColumns: COLS }}>
+            {["Date", "Asset", "Type", "Qty", "Price", "Total", ""].map((col, i) =>
               col === "Date" ? (
                 <button
-                  key={col}
+                  key={i}
                   onClick={() => setSortOrder((prev) => prev === "desc" ? "asc" : "desc")}
-                  className="flex items-center gap-1 text-[11px] font-medium text-white/30 uppercase tracking-wider hover:text-white/60 transition-colors"
+                  style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.07em", background: "none", border: "none", cursor: "pointer" }}
                 >
-                  Date
-                  <span className="text-[10px]">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                  Date <span style={{ fontSize: 10 }}>{sortOrder === "desc" ? "↓" : "↑"}</span>
                 </button>
               ) : (
-                <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
-                  {col}
-                </span>
+                <span key={i}>{col}</span>
               )
             )}
           </div>
 
           {sorted.length === 0 ? (
-            <div className="flex items-center justify-center flex-1">
-              <p className="text-sm text-white/20">No transactions yet</p>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <p style={{ fontSize: 13, color: "var(--fg-5)" }}>No transactions yet</p>
             </div>
           ) : (
-            <div className="overflow-y-auto flex-1">
+            <div style={{ overflowY: "auto", flex: 1 }}>
               {sorted.map((t) => {
                 const asset = assets.find((a) => a.id === t.asset_id);
                 const total = t.quantity * t.price;
+                const sym = asset?.currency === "USD" ? "$" : "₺";
+                const typeStyle = TYPE_STYLE[t.transaction_type];
                 return (
                   <div
                     key={t.id}
-                    className="group grid grid-cols-[100px_1fr_80px_110px_110px_120px_64px] px-5 py-3.5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                    className="table-row group"
+                    style={{ gridTemplateColumns: COLS }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                   >
-                    <span className="text-sm text-white/40">{formatDate(t.date)}</span>
+                    <span style={{ fontSize: 13, color: "var(--fg-4)" }}>{formatDate(t.date)}</span>
                     <div>
-                      <p className="text-sm text-white">{asset?.name ?? "—"}</p>
-                      <p className="text-xs text-white/30">{asset?.symbol ?? "—"}</p>
+                      <p style={{ fontSize: 13, color: "var(--fg)" }}>{asset?.name ?? "—"}</p>
+                      <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{asset?.symbol ?? "—"}</p>
                     </div>
                     <span>
-                      <span className={cn(
-                        "text-[11px] font-medium px-2 py-1 rounded-full border",
-                        t.transaction_type === "BUY"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : t.transaction_type === "SELL"
-                            ? "bg-red-500/10 text-red-400 border-red-500/20"
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      )}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: "var(--r-1)",
+                        border: `1px solid ${typeStyle.border}`,
+                        background: typeStyle.bg, color: typeStyle.color,
+                      }}>
                         {t.transaction_type}
                       </span>
                     </span>
-                    <span className="text-sm text-white/70 font-mono">{t.quantity.toFixed(2)}</span>
-                    <span className="text-sm text-white/70 font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(t.price)}</span>
-                    <span className="text-sm text-white font-mono">{asset?.currency === "USD" ? "$" : "₺"}{formatCurrency(total)}</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{t.quantity.toFixed(2)}</span>
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>{sym}{formatCurrency(t.price)}</span>
+                    <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>{sym}{formatCurrency(total)}</span>
+                    <div className="opacity-0 group-hover:opacity-100" style={{ display: "flex", alignItems: "center", gap: 2, justifyContent: "flex-end", transition: "opacity 80ms" }}>
                       <button
                         onClick={() => setEditing(t)}
-                        className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                        className="btn-icon"
+                        style={{ width: 26, height: 26 }}
                       >
-                        <Pencil size={13} />
+                        <Pencil size={12} />
                       </button>
                       <button
                         onClick={() => setConfirmId(t.id)}
-                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="btn-icon"
+                        style={{ width: 26, height: 26, color: "var(--danger)" }}
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>

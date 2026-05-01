@@ -6,11 +6,9 @@ import { besApi } from "../../api/bes";
 import { useBESStore } from "../../store/useBESStore";
 import { formatCurrency, formatDate } from "../../lib/formatters";
 import { logError } from "../../lib/logger";
-import { cn } from "../../lib/utils";
 import { DAY_PICKER_CLASS_NAMES } from "../../components/transactions/types";
+import { PageHeader } from "../../components/ui/primitives";
 import type { BESPlan } from "../../types/bes";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeRemaining(endDateStr: string): { label: string; urgent: boolean } {
   const end = new Date(endDateStr);
@@ -31,15 +29,20 @@ function timeRemaining(endDateStr: string): { label: string; urgent: boolean } {
   return { label: parts.join(" "), urgent: totalDays <= 30 };
 }
 
-// ── Modals ────────────────────────────────────────────────────────────────────
+const MODAL_STYLE = {
+  overlay: {
+    position: "fixed" as const, inset: 0, zIndex: 60,
+    background: "oklch(0 0 0 / 0.55)", backdropFilter: "blur(4px)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+  },
+  box: {
+    width: 400, background: "var(--bg-2)", border: "1px solid var(--line-strong)",
+    borderRadius: "var(--r-4)", boxShadow: "0 20px 60px oklch(0 0 0 / 0.5)",
+    padding: 20, display: "flex", flexDirection: "column" as const, gap: 16,
+  },
+};
 
-function AddPlanModal({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: (plan: BESPlan) => void;
-}) {
+function AddPlanModal({ onClose, onCreated }: { onClose: () => void; onCreated: (plan: BESPlan) => void }) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -68,79 +71,40 @@ function AddPlanModal({
     }
   }
 
+  const labelStyle = { display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6 };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-white">Add BES Plan</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">Plan Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Anadolu Hayat – Agresif"
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50"
-            />
+    <div style={MODAL_STYLE.overlay}>
+      <div style={MODAL_STYLE.box}>
+        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>Add BES Plan</h2>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Plan Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Anadolu Hayat – Agresif" style={{ width: "100%" }} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">Company</label>
-            <input
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="e.g. Anadolu Hayat"
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50"
-            />
+          <div>
+            <label style={labelStyle}>Company</label>
+            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. Anadolu Hayat" style={{ width: "100%" }} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">
-              End Date <span className="normal-case text-white/20">(optional)</span>
-            </label>
+          <div>
+            <label style={labelStyle}>End Date <span style={{ fontWeight: 400, color: "var(--fg-5)", textTransform: "none" }}>(optional)</span></label>
             <PopoverPrimitive.Root open={endDateOpen} onOpenChange={setEndDateOpen}>
-              <PopoverPrimitive.Trigger className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none transition-colors hover:border-white/20">
-                <span className={endDate ? "text-white" : "text-white/20"}>
-                  {endDate
-                    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(endDate)
-                    : "Pick a date"}
-                </span>
-                <CalendarIcon size={14} className="text-white/30" />
+              <PopoverPrimitive.Trigger style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: "var(--r-2)", padding: "6px 10px", fontSize: 13, color: endDate ? "var(--fg)" : "var(--fg-5)", cursor: "pointer", outline: "none" }}>
+                {endDate ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(endDate) : "Pick a date"}
+                <CalendarIcon size={14} style={{ color: "var(--fg-4)" }} />
               </PopoverPrimitive.Trigger>
               <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                  sideOffset={4}
-                  className="z-[60] bg-[#141422] border border-white/10 rounded-xl shadow-xl p-3"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <button
-                      type="button"
-                      onClick={() => setEndDateMonth((m) => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
-                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
-                    >‹</button>
-                    <span className="text-sm font-medium text-white">
+                <PopoverPrimitive.Content sideOffset={4} style={{ zIndex: 70, background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: "var(--r-3)", boxShadow: "0 8px 32px oklch(0 0 0 / 0.4)", padding: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <button type="button" onClick={() => setEndDateMonth((m) => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })} className="btn-icon">‹</button>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>
                       {new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(endDateMonth)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setEndDateMonth((m) => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
-                      className="w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/5 transition-colors text-2xl leading-none"
-                    >›</button>
+                    <button type="button" onClick={() => setEndDateMonth((m) => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })} className="btn-icon">›</button>
                   </div>
-                  <DayPicker
-                    mode="single"
-                    month={endDateMonth}
-                    hideNavigation
-                    selected={endDate}
-                    onSelect={(day) => {
-                      setEndDate(day);
-                      setEndDateOpen(false);
-                    }}
-                    classNames={DAY_PICKER_CLASS_NAMES}
-                  />
+                  <DayPicker mode="single" month={endDateMonth} hideNavigation selected={endDate} onSelect={(day) => { setEndDate(day); setEndDateOpen(false); }} classNames={DAY_PICKER_CLASS_NAMES} />
                   {endDate && (
-                    <button
-                      type="button"
-                      onClick={() => { setEndDate(undefined); setEndDateOpen(false); }}
-                      className="mt-2 w-full py-1.5 rounded-lg text-xs text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
-                    >
+                    <button type="button" onClick={() => { setEndDate(undefined); setEndDateOpen(false); }} style={{ marginTop: 8, width: "100%", padding: "6px", borderRadius: "var(--r-2)", fontSize: 11.5, color: "var(--fg-4)", background: "none", border: "none", cursor: "pointer" }}>
                       Clear
                     </button>
                   )}
@@ -148,20 +112,10 @@ function AddPlanModal({
               </PopoverPrimitive.Portal>
             </PopoverPrimitive.Root>
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          <div className="flex gap-2 mt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim() || !company.trim()}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+          {error && <p style={{ fontSize: 12, color: "var(--danger)" }}>{error}</p>}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button type="button" onClick={onClose} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            <button type="submit" disabled={loading || !name.trim() || !company.trim()} className="btn btn-primary" style={{ flex: 1 }}>
               {loading ? "Creating…" : "Create"}
             </button>
           </div>
@@ -171,16 +125,8 @@ function AddPlanModal({
   );
 }
 
-function AddContributionModal({
-  planId,
-  planName,
-  onClose,
-  onAdded,
-}: {
-  planId: number;
-  planName: string;
-  onClose: () => void;
-  onAdded: (plan: BESPlan) => void;
+function AddContributionModal({ planId, planName, onClose, onAdded }: {
+  planId: number; planName: string; onClose: () => void; onAdded: (plan: BESPlan) => void;
 }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
@@ -194,10 +140,7 @@ function AddContributionModal({
     setLoading(true);
     setError(null);
     try {
-      await besApi.addContribution(planId, {
-        date: new Date(date).toISOString(),
-        amount: parsed,
-      });
+      await besApi.addContribution(planId, { date: new Date(date).toISOString(), amount: parsed });
       const plans = await besApi.listPlans();
       const updated = plans.find((p) => p.id === planId);
       if (updated) onAdded(updated);
@@ -209,49 +152,28 @@ function AddContributionModal({
     }
   }
 
+  const labelStyle = { display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6 };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
+    <div style={MODAL_STYLE.overlay}>
+      <div style={MODAL_STYLE.box}>
         <div>
-          <h2 className="text-base font-semibold text-white">Add Contribution</h2>
-          <p className="text-sm text-white/40 mt-0.5">{planName}</p>
+          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>Add Contribution</h2>
+          <p style={{ fontSize: 12, color: "var(--fg-4)", marginTop: 4 }}>{planName}</p>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/50"
-            />
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Date</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: "100%" }} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">Amount (₺)</label>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50"
-            />
+          <div>
+            <label style={labelStyle}>Amount (₺)</label>
+            <input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" style={{ width: "100%" }} />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          <div className="flex gap-2 mt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !amount || parseFloat(amount) <= 0}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+          {error && <p style={{ fontSize: 12, color: "var(--danger)" }}>{error}</p>}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button type="button" onClick={onClose} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            <button type="submit" disabled={loading || !amount || parseFloat(amount) <= 0} className="btn btn-primary" style={{ flex: 1 }}>
               {loading ? "Adding…" : "Add"}
             </button>
           </div>
@@ -261,14 +183,8 @@ function AddContributionModal({
   );
 }
 
-function UpdateValueModal({
-  plan,
-  onClose,
-  onUpdated,
-}: {
-  plan: BESPlan;
-  onClose: () => void;
-  onUpdated: (plan: BESPlan) => void;
+function UpdateValueModal({ plan, onClose, onUpdated }: {
+  plan: BESPlan; onClose: () => void; onUpdated: (plan: BESPlan) => void;
 }) {
   const [value, setValue] = useState(plan.current_value?.toString() ?? "");
   const [loading, setLoading] = useState(false);
@@ -292,39 +208,23 @@ function UpdateValueModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#0e0e18] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
+    <div style={MODAL_STYLE.overlay}>
+      <div style={MODAL_STYLE.box}>
         <div>
-          <h2 className="text-base font-semibold text-white">Update Current Value</h2>
-          <p className="text-sm text-white/40 mt-0.5">{plan.name}</p>
+          <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>Update Current Value</h2>
+          <p style={{ fontSize: 12, color: "var(--fg-4)", marginTop: 4 }}>{plan.name}</p>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-white/40 uppercase tracking-wider">Current Value (₺)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="0.00"
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/50"
-            />
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: "var(--fg-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+              Current Value (₺)
+            </label>
+            <input type="number" min="0" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} placeholder="0.00" style={{ width: "100%" }} />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          <div className="flex gap-2 mt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-white/5 text-white/50 hover:bg-white/[0.08] hover:text-white/70 transition-colors border border-white/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || value === "" || parseFloat(value) < 0}
-              className="flex-1 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
+          {error && <p style={{ fontSize: 12, color: "var(--danger)" }}>{error}</p>}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button type="button" onClick={onClose} className="btn btn-ghost" style={{ flex: 1 }}>Cancel</button>
+            <button type="submit" disabled={loading || value === "" || parseFloat(value) < 0} className="btn btn-primary" style={{ flex: 1 }}>
               {loading ? "Saving…" : "Save"}
             </button>
           </div>
@@ -334,145 +234,121 @@ function UpdateValueModal({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 type ActiveModal =
   | { type: "add-plan" }
   | { type: "add-contribution"; plan: BESPlan }
   | { type: "update-value"; plan: BESPlan }
   | null;
 
+const COLS = "1fr 130px 130px 130px 100px 80px";
+
 export function BES() {
-  const { plans, upsertPlan, setPlans } = useBESStore();
+  const { plans, upsertPlan } = useBESStore();
   const [modal, setModal] = useState<ActiveModal>(null);
 
-  function handlePlanCreated(plan: BESPlan) {
-    upsertPlan(plan);
-    setModal(null);
-  }
-
-  function handlePlanUpdated(updated: BESPlan) {
-    upsertPlan(updated);
-    setModal(null);
-  }
-
-  function handleContributionAdded(updated: BESPlan) {
-    upsertPlan(updated);
-    setModal(null);
-  }
+  function handlePlanCreated(plan: BESPlan) { upsertPlan(plan); setModal(null); }
+  function handlePlanUpdated(updated: BESPlan) { upsertPlan(updated); setModal(null); }
+  function handleContributionAdded(updated: BESPlan) { upsertPlan(updated); setModal(null); }
 
   return (
-    <div className="flex flex-col h-full gap-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">BES</h1>
-          <p className="text-sm text-white/40 mt-0.5">{plans.length} plan{plans.length !== 1 ? "s" : ""}</p>
-        </div>
-        <button
-          onClick={() => setModal({ type: "add-plan" })}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          New Plan
-        </button>
-      </div>
+    <div className="page-in" style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
+      <PageHeader
+        title="BES"
+        meta={`${plans.length} plan${plans.length !== 1 ? "s" : ""}`}
+        actions={
+          <button className="btn btn-primary" onClick={() => setModal({ type: "add-plan" })}>
+            <Plus size={14} /> New Plan
+          </button>
+        }
+      />
 
-      {/* Table */}
-      <div className="flex-1 bg-[#0e0e18] border border-white/5 rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-[1fr_130px_130px_130px_100px_100px] px-5 py-3 border-b border-white/5 shrink-0">
-          {["Plan", "Total Paid", "Current Value", "P&L", "End Date", "Actions"].map((col) => (
-            <span key={col} className="text-[11px] font-medium text-white/30 uppercase tracking-wider">
-              {col}
-            </span>
+      <div className="surface" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div className="table-head" style={{ gridTemplateColumns: COLS }}>
+          {["Plan", "Total Paid", "Current Value", "P&L", "End Date", ""].map((col) => (
+            <span key={col}>{col}</span>
           ))}
         </div>
 
         {plans.length === 0 ? (
-          <div className="flex items-center justify-center flex-1">
-            <p className="text-sm text-white/20">No BES plans yet</p>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <p style={{ fontSize: 13, color: "var(--fg-5)" }}>No BES plans yet</p>
           </div>
         ) : (
-          <div className="overflow-y-auto flex-1">
+          <div style={{ overflowY: "auto", flex: 1 }}>
             {plans.map((plan) => {
               const remaining = plan.end_date ? timeRemaining(plan.end_date) : null;
               return (
                 <div
                   key={plan.id}
-                  className="grid grid-cols-[1fr_130px_130px_130px_100px_100px] px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors items-center"
+                  className="table-row"
+                  style={{ gridTemplateColumns: COLS }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                 >
-                  {/* Plan info */}
                   <div>
-                    <p className="text-sm font-medium text-white">{plan.name}</p>
-                    <p className="text-xs text-white/30 mt-0.5">{plan.company}</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{plan.name}</p>
+                    <p style={{ fontSize: 11, color: "var(--fg-4)", marginTop: 1 }}>{plan.company}</p>
                   </div>
 
-                  {/* Total Paid */}
-                  <span className="text-sm text-white/70 font-mono">
+                  <span className="num" style={{ fontSize: 13, color: "var(--fg-2)" }}>
                     ₺{formatCurrency(plan.total_paid)}
                   </span>
 
-                  {/* Current Value */}
                   <div>
                     {plan.current_value !== null ? (
                       <>
-                        <span className="text-sm text-white font-mono">
-                          ₺{formatCurrency(plan.current_value)}
-                        </span>
+                        <span className="num" style={{ fontSize: 13, color: "var(--fg)" }}>₺{formatCurrency(plan.current_value)}</span>
                         {plan.last_updated && (
-                          <p className="text-xs text-white/20 mt-0.5">{formatDate(plan.last_updated)}</p>
+                          <p style={{ fontSize: 10.5, color: "var(--fg-5)", marginTop: 1 }}>{formatDate(plan.last_updated)}</p>
                         )}
                       </>
                     ) : (
-                      <span className="text-sm text-white/20">—</span>
+                      <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                     )}
                   </div>
 
-                  {/* P&L */}
                   <div>
                     {plan.pnl !== null ? (
                       <>
-                        <p className={cn("text-sm font-mono font-medium", plan.pnl >= 0 ? "text-emerald-400" : "text-red-400")}>
+                        <p className="num" style={{ fontSize: 13, fontWeight: 500, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)" }}>
                           {plan.pnl >= 0 ? "+" : ""}₺{formatCurrency(Math.abs(plan.pnl))}
                         </p>
-                        <p className={cn("text-xs font-mono mt-0.5", plan.pnl >= 0 ? "text-emerald-400/60" : "text-red-400/60")}>
+                        <p className="num" style={{ fontSize: 10.5, marginTop: 1, color: plan.pnl >= 0 ? "var(--success)" : "var(--danger)", opacity: 0.6 }}>
                           {plan.pnl >= 0 ? "+" : ""}{plan.pnl_pct?.toFixed(2)}%
                         </p>
                       </>
                     ) : (
-                      <span className="text-sm text-white/20">—</span>
+                      <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                     )}
                   </div>
 
-                  {/* End Date / Time Remaining */}
                   <div>
                     {plan.end_date && remaining ? (
                       <>
-                        <p className={cn("text-sm font-mono font-medium", remaining.urgent ? "text-red-400" : "text-white/60")}>
+                        <p className="num" style={{ fontSize: 13, fontWeight: 500, color: remaining.urgent ? "var(--danger)" : "var(--fg-2)" }}>
                           {remaining.label}
                         </p>
-                        <p className="text-xs text-white/20 mt-0.5">{formatDate(plan.end_date)}</p>
+                        <p style={{ fontSize: 10.5, color: "var(--fg-5)", marginTop: 1 }}>{formatDate(plan.end_date)}</p>
                       </>
                     ) : (
-                      <span className="text-sm text-white/20">—</span>
+                      <span style={{ fontSize: 13, color: "var(--fg-5)" }}>—</span>
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <button
                       onClick={() => setModal({ type: "add-contribution", plan })}
                       title="Add contribution"
-                      className="p-1.5 rounded-lg text-white/30 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                      className="btn-icon"
                     >
-                      <CirclePlus size={15} />
+                      <CirclePlus size={14} />
                     </button>
                     <button
                       onClick={() => setModal({ type: "update-value", plan })}
                       title="Update current value"
-                      className="p-1.5 rounded-lg text-white/30 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                      className="btn-icon"
                     >
-                      <PenLine size={15} />
+                      <PenLine size={14} />
                     </button>
                   </div>
                 </div>
@@ -482,7 +358,6 @@ export function BES() {
         )}
       </div>
 
-      {/* Modals */}
       {modal?.type === "add-plan" && (
         <AddPlanModal onClose={() => setModal(null)} onCreated={handlePlanCreated} />
       )}

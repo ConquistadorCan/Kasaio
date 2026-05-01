@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
+import { Insights } from "./pages/Insights";
 import { Transactions } from "./pages/Transactions";
 import { Categories } from "./pages/Categories";
 import { InvestmentsPortfolio } from "./pages/Investments/index";
@@ -21,10 +22,11 @@ export function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: "#1a1a2e",
-            border: "1px solid rgba(255,255,255,0.08)",
-            color: "#fff",
+            background: "oklch(0.225 0.007 60)",
+            border: "1px solid oklch(1 0 0 / 0.10)",
+            color: "oklch(0.97 0.005 80)",
             fontSize: "13px",
+            fontFamily: "'Inter', system-ui, sans-serif",
           },
         }}
       />
@@ -32,6 +34,7 @@ export function App() {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="insights" element={<Insights />} />
           <Route path="cash-flow/transactions" element={<Transactions />} />
           <Route path="cash-flow/categories" element={<Categories />} />
           <Route path="investments/portfolio" element={<InvestmentsPortfolio />} />

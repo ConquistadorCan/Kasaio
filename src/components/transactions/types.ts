@@ -24,29 +24,29 @@ export const EMPTY_FORM: TransactionFormData = {
 };
 
 export const DAY_PICKER_CLASS_NAMES = {
-  root: "text-white/80 text-sm",
-months: "flex flex-col",
-  month: "space-y-3",
+  root: "dp-root",
+  months: "dp-months",
+  month: "dp-month",
   month_caption: "hidden",
-  month_grid: "w-full border-collapse",
-  weekdays: "flex",
-  weekday: "w-8 h-8 flex items-center justify-center text-[11px] text-white/20 font-medium",
-  weeks: "flex flex-col gap-0.5 min-h-[192px]",
-  week: "flex",
-  day: "w-8 h-8 flex items-center justify-center",
-  day_button: "w-8 h-8 flex items-center justify-center rounded-lg text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors outline-none",
-  selected: "bg-violet-500/20 rounded-lg",
-  today: "bg-red-500/20 rounded-lg text-red-400 font-medium",
-  outside: "opacity-20",
-  disabled: "opacity-20 cursor-not-allowed",
+  month_grid: "dp-month-grid",
+  weekdays: "dp-weekdays",
+  weekday: "dp-weekday",
+  weeks: "dp-weeks",
+  week: "dp-week",
+  day: "dp-day",
+  day_button: "dp-day-btn",
+  selected: "dp-selected",
+  today: "dp-today",
+  outside: "dp-outside",
+  disabled: "dp-disabled",
 } as const;
 
 export const DAY_PICKER_RANGE_CLASS_NAMES = {
   ...DAY_PICKER_CLASS_NAMES,
-  selected: "bg-violet-500/20 rounded-lg text-violet-300",
-  range_start: "bg-violet-500/40 rounded-lg text-white font-medium",
-  range_end: "bg-violet-500/40 rounded-lg text-white font-medium",
-  range_middle: "bg-violet-500/10 rounded-none text-white/70",
+  selected: "dp-selected",
+  range_start: "dp-range-start",
+  range_end: "dp-range-end",
+  range_middle: "dp-range-mid",
 } as const;
 
 export const TYPE_BADGE: Record<TransactionType, { label: string; className: string }> = {
