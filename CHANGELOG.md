@@ -2,6 +2,14 @@
 
 All notable changes to Kasaio will be documented in this file.
 
+## [2.0.3] - 2026-05-01
+
+### Fixed
+
+- Fixed intermittent startup failure where the frontend gave up before the backend finished initializing.
+- Repaired the Tauri startup handshake by invoking `frontend_ready` as a command instead of emitting it as an event.
+- Stored backend startup failures in Tauri state so the frontend can still display the failure if it missed the original event.
+
 ## [2.0.2] - 2026-03-31
 
 ### Fixed

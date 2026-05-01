@@ -77,17 +77,25 @@ if (isRetry) {
   packageJson.version = newVersion;
   writeFileSync("package.json", JSON.stringify(packageJson, null, 2) + "\n");
 
-  // 6. Update tauri.conf.json
+  // 6. Update package-lock.json metadata
+  const packageLock = JSON.parse(readFileSync("package-lock.json", "utf-8"));
+  packageLock.version = newVersion;
+  if (packageLock.packages?.[""]) {
+    packageLock.packages[""].version = newVersion;
+  }
+  writeFileSync("package-lock.json", JSON.stringify(packageLock, null, 2) + "\n");
+
+  // 7. Update tauri.conf.json
   const tauriConf = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf-8"));
   tauriConf.version = newVersion;
   writeFileSync("src-tauri/tauri.conf.json", JSON.stringify(tauriConf, null, 2) + "\n");
 
-  // 7. Update Cargo.toml
+  // 8. Update Cargo.toml
   let cargoToml = readFileSync("src-tauri/Cargo.toml", "utf-8");
   cargoToml = cargoToml.replace(/^version = ".*"/m, `version = "${newVersion}"`);
   writeFileSync("src-tauri/Cargo.toml", cargoToml);
 
-  // 8. Update main.py
+  // 9. Update main.py
   let mainPy = readFileSync("src-backend/main.py", "utf-8");
   mainPy = mainPy.replace(/version="[^"]*"/, `version="${newVersion}"`);
   writeFileSync("src-backend/main.py", mainPy);
@@ -95,8 +103,8 @@ if (isRetry) {
   console.log(`Version bumped: ${currentVersion} → ${newVersion}`);
 }
 
-// 9. Commit version bump (skip if nothing to commit)
-run("git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-backend/main.py");
+// 10. Commit version bump (skip if nothing to commit)
+run("git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-backend/main.py");
 const status = run("git status --porcelain");
 if (status) {
   run(`git commit -m "chore: bump version to ${newVersion}"`);
@@ -104,7 +112,7 @@ if (status) {
   console.log("Nothing to commit — version bump already committed.");
 }
 
-// 10. Create tag
+// 11. Create tag
 const existingTags = run("git tag").split("\n");
 if (existingTags.includes(`v${newVersion}`)) {
   if (isRetry) {
@@ -119,7 +127,7 @@ if (existingTags.includes(`v${newVersion}`)) {
   run(`git tag v${newVersion}`);
 }
 
-// 11. Push
+// 12. Push
 run("git push origin main");
 run(`git push origin v${newVersion}`);
 

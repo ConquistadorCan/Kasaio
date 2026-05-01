@@ -128,9 +128,10 @@ Kasaio follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`
 - `MINOR` — new features, backwards compatible (e.g. `2.1.0`)
 - `MAJOR` — breaking changes or major milestones (e.g. `3.0.0`)
 
-The version is kept in sync across four files automatically by the release script:
+The version is kept in sync across five files automatically by the release script:
 
 - `package.json` → `version`
+- `package-lock.json` → root package metadata
 - `src-tauri/tauri.conf.json` → `version`
 - `src-tauri/Cargo.toml` → `version`
 - `src-backend/main.py` → FastAPI `version`
