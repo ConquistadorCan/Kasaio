@@ -1,21 +1,31 @@
-from database import Base
-from datetime import datetime
+from datetime import date
+from typing import Optional
 
-from sqlalchemy import DateTime, Numeric, String, ForeignKey, Enum
+from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enums.transaction_type_enum import TransactionTypeEnum
+from database import Base
+from enums.currency_enum import Currency
+from enums.transaction_type_enum import TransactionType
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    type: Mapped[TransactionTypeEnum] = mapped_column(Enum(TransactionTypeEnum), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="TRY")
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now())
-    description: Mapped[str] = mapped_column(String(255), nullable=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), nullable=False)
+    category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id"), nullable=True
+    )
+    type: Mapped[TransactionType] = mapped_column(Enum(TransactionType), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    currency: Mapped[Currency] = mapped_column(Enum(Currency), nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id"), nullable=True)
-    category: Mapped["Category"] = relationship("Category", back_populates="transactions")
-    
+    account: Mapped["Account"] = relationship("Account", back_populates="transactions")
+    category: Mapped[Optional["Category"]] = relationship(
+        "Category", back_populates="transactions"
+    )

@@ -2,8 +2,10 @@ import enum
 
 
 class AssetType(enum.Enum):
-    COMMODITY = "COMMODITY"
-    CRYPTOCURRENCY = "CRYPTOCURRENCY"
-    TEFAS_FUND = "TEFAS_FUND"
-    ETF = "ETF"
-    EUROBOND = "EUROBOND"
+    STOCK = "stock"
+    ETF = "etf"
+    CRYPTO = "crypto"
+    COMMODITY = "commodity"
+    EUROBOND = "eurobond"
+    TEFAS_FUND = "tefas_fund"
+    BES = "bes"

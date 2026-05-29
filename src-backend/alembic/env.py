@@ -7,7 +7,11 @@ from sqlalchemy import pool
 from alembic import context
 
 from database import Base
-from models import Category, Transaction  # noqa: F401
+from models import (  # noqa: F401
+    Account, Asset, AssetPrice, BesDetails, Category, CommodityDetails,
+    CryptoDetails, EtfDetails, EurobondDetails, InvestmentIncome,
+    InvestmentTransaction, StockDetails, TefasDetails, Transaction, Transfer,
+)
 
 config = context.config
 fileConfig(config.config_file_name)

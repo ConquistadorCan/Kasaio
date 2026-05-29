@@ -1,6 +1,6 @@
 import enum
 
-class TransactionType(enum.Enum):
+
+class CategoryType(enum.Enum):
     INCOME = "income"
     EXPENSE = "expense"
-    TRANSFER = "transfer"
