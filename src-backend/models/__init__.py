@@ -1,4 +1,5 @@
 from .account import Account
+from .exchange_rate import ExchangeRate
 from .asset import Asset
 from .asset_price import AssetPrice
 from .bes_details import BesDetails
