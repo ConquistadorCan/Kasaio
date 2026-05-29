@@ -9,7 +9,7 @@ from alembic import context
 from database import Base
 from models import (  # noqa: F401
     Account, Asset, AssetPrice, BesDetails, Category, CommodityDetails,
-    CryptoDetails, EtfDetails, EurobondDetails, InvestmentIncome,
+    CryptoDetails, EtfDetails, EurobondDetails, ExchangeRate, InvestmentIncome,
     InvestmentTransaction, StockDetails, TefasDetails, Transaction, Transfer,
 )
 

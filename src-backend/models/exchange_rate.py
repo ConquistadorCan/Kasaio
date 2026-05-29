@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Numeric
+from sqlalchemy import DateTime, Enum, Numeric, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -15,5 +15,5 @@ class ExchangeRate(Base):
     to_currency: Mapped[Currency] = mapped_column(Enum(Currency), nullable=False)
     rate: Mapped[float] = mapped_column(Numeric(18, 8), nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.now
+        DateTime, nullable=False, server_default=func.now()
     )
