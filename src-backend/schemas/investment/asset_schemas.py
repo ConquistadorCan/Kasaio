@@ -1,16 +1,63 @@
 from datetime import date
-from typing import Any
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict
 
 from enums.asset_type_enum import AssetType
 
 
+class StockDetailsSchema(BaseModel):
+    ticker: str
+    exchange: str
+
+
+class EtfDetailsSchema(BaseModel):
+    ticker: str
+    exchange: str
+
+
+class CryptoDetailsSchema(BaseModel):
+    ticker: str
+    network: str
+
+
+class CommodityDetailsSchema(BaseModel):
+    unit: str = "gram"
+
+
+class EurobondDetailsSchema(BaseModel):
+    isin: str
+    coupon_rate: float
+    maturity_date: date
+
+
+class TefasDetailsSchema(BaseModel):
+    fund_code: str
+    fund_type: str
+
+
+class BesDetailsSchema(BaseModel):
+    company: str
+    plan_name: str
+    monthly_contribution: float
+
+
+AssetDetails = Union[
+    StockDetailsSchema,
+    EtfDetailsSchema,
+    CryptoDetailsSchema,
+    CommodityDetailsSchema,
+    EurobondDetailsSchema,
+    TefasDetailsSchema,
+    BesDetailsSchema,
+]
+
+
 class AssetCreateSchema(BaseModel):
     name: str
     asset_type: AssetType
     account_id: int
-    details: dict[str, Any]
+    details: AssetDetails
 
 
 class AssetListItemSchema(BaseModel):

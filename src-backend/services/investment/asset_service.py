@@ -20,7 +20,11 @@ from models.eurobond_details import EurobondDetails
 from models.investment_transaction import InvestmentTransaction
 from models.stock_details import StockDetails
 from models.tefas_details import TefasDetails
-from schemas.investment.asset_schemas import AssetDetailResponseSchema, AssetListItemSchema
+from schemas.investment.asset_schemas import (
+    AssetCreateSchema,
+    AssetDetailResponseSchema,
+    AssetListItemSchema,
+)
 
 logger = logging.getLogger("kasaio")
 
@@ -33,17 +37,6 @@ _DETAIL_MODEL_MAP: dict[AssetType, type] = {
     AssetType.TEFAS_FUND: TefasDetails,
     AssetType.BES: BesDetails,
 }
-
-_REQUIRED_DETAIL_FIELDS: dict[AssetType, list[str]] = {
-    AssetType.STOCK: ["ticker", "exchange"],
-    AssetType.ETF: ["ticker", "exchange"],
-    AssetType.CRYPTO: ["ticker", "network"],
-    AssetType.COMMODITY: [],
-    AssetType.EUROBOND: ["isin", "coupon_rate", "maturity_date"],
-    AssetType.TEFAS_FUND: ["fund_code", "fund_type"],
-    AssetType.BES: ["company", "plan_name", "monthly_contribution"],
-}
-
 
 def _extract_detail_dict(asset: Asset) -> dict[str, Any]:
     detail_attr = {
@@ -163,7 +156,7 @@ class AssetService:
             )
         return items
 
-    async def create_asset(self, data) -> Asset:
+    async def create_asset(self, data: AssetCreateSchema) -> Asset:
         account = await self.db.get(Account, data.account_id)
         if not account:
             raise BusinessRuleError(f"Account not found: id={data.account_id}")
@@ -171,13 +164,6 @@ class AssetService:
             raise BusinessRuleError(
                 f"account_id must point to an investment account, got '{account.account_type.value}'"
             )
-
-        required_fields = _REQUIRED_DETAIL_FIELDS[data.asset_type]
-        for field in required_fields:
-            if field not in data.details:
-                raise BusinessRuleError(
-                    f"Missing required detail field '{field}' for asset_type '{data.asset_type.value}'"
-                )
 
         asset = Asset(name=data.name, asset_type=data.asset_type, account_id=data.account_id)
         self.db.add(asset)
@@ -187,7 +173,7 @@ class AssetService:
         allowed = set(
             col for col in detail_model.__mapper__.column_attrs.keys() if col != "asset_id"
         )
-        detail_kwargs = {k: v for k, v in data.details.items() if k in allowed}
+        detail_kwargs = {k: v for k, v in data.details.model_dump().items() if k in allowed}
         detail = detail_model(asset_id=asset.id, **detail_kwargs)
         self.db.add(detail)
         await self.db.commit()
