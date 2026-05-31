@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from core.exceptions import AppError
-from core.seed import seed
 
 
 def find_free_port() -> int:
@@ -43,7 +42,6 @@ def setup_logging():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await seed()
     yield
 
 
@@ -94,24 +92,22 @@ from routers.cash.category_router import router as category_router
 from routers.cash.transaction_router import router as transaction_router
 from routers.cash.transfer_router import router as transfer_router
 from routers.cash.exchange_rate_router import router as exchange_rate_router
-from routers.holding_router import router as holding_router
-from routers.investment_transaction_router import router as investment_transaction_router
-from routers.asset_price_router import router as asset_price_router
-from routers.asset_router import router as asset_router
-from routers.portfolio_router import router as portfolio_router
-from routers.bes_router import router as bes_router
+from routers.investment.asset_router import router as asset_router
+from routers.investment.investment_transaction_router import router as investment_transaction_router
+from routers.investment.investment_income_router import router as investment_income_router
+from routers.investment.asset_price_router import router as asset_price_router
+from routers.investment.portfolio_router import router as portfolio_router
 
-app.include_router(account_router,       prefix="/cash/accounts",       tags=["accounts"])
-app.include_router(category_router,      prefix="/cash/categories",     tags=["categories"])
-app.include_router(transaction_router,   prefix="/cash/transactions",   tags=["transactions"])
-app.include_router(transfer_router,      prefix="/cash/transfers",      tags=["transfers"])
-app.include_router(exchange_rate_router, prefix="/cash/exchange-rates", tags=["exchange-rates"])
-app.include_router(holding_router)
-app.include_router(investment_transaction_router)
-app.include_router(asset_price_router)
-app.include_router(asset_router)
-app.include_router(portfolio_router)
-app.include_router(bes_router)
+app.include_router(account_router,               prefix="/cash/accounts",           tags=["accounts"])
+app.include_router(category_router,              prefix="/cash/categories",         tags=["categories"])
+app.include_router(transaction_router,           prefix="/cash/transactions",       tags=["transactions"])
+app.include_router(transfer_router,              prefix="/cash/transfers",          tags=["transfers"])
+app.include_router(exchange_rate_router,         prefix="/cash/exchange-rates",     tags=["exchange-rates"])
+app.include_router(asset_router,                 prefix="/investment/assets",       tags=["assets"])
+app.include_router(investment_transaction_router,prefix="/investment/transactions", tags=["investment-transactions"])
+app.include_router(investment_income_router,     prefix="/investment/income",       tags=["investment-income"])
+app.include_router(asset_price_router,           prefix="/investment/prices",       tags=["asset-prices"])
+app.include_router(portfolio_router,             prefix="/investment/portfolio",    tags=["portfolio"])
 
 
 @app.get("/health") # DO NOT CHANGE THIS ENDPOINT, IT IS USED FOR HEALTH CHECKS
