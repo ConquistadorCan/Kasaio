@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
+from core.database import get_db
 from schemas.holding_schemas import HoldingResponse
 from services.holding_service import get_holding, get_holdings
 

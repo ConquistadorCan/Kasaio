@@ -3,7 +3,7 @@ import logging
 
 from sqlalchemy import select
 
-from database import AsyncSessionLocal
+from core.database import AsyncSessionLocal
 from enums.asset_type_enum import AssetType
 from enums.currency_enum import Currency
 from models.asset import Asset

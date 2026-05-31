@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import Date, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from core.database import Base
 from enums.investment_transaction_type_enum import InvestmentTransactionType
 
 

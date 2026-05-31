@@ -8,7 +8,7 @@ from typing import AsyncGenerator
 if getattr(sys, "frozen", False):
     _base_dir = Path(os.environ["KASAIO_DATA_DIR"])
 else:
-    _base_dir = Path(__file__).parent
+    _base_dir = Path(__file__).parent.parent
 
 DB_PATH = _base_dir / "kasaio.db"
 DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"

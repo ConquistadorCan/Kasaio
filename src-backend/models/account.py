@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import Boolean, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from core.database import Base
 from enums.account_type_enum import AccountType
 from enums.currency_enum import Currency
 

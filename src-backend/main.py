@@ -10,7 +10,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from seed import seed
+from core.exceptions import AppError
+from core.seed import seed
 
 
 def find_free_port() -> int:
@@ -55,6 +56,11 @@ app = FastAPI(
 logger = logging.getLogger("kasaio")
 
 
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error(f"Unexpected error: {exc}", exc_info=True)
@@ -83,8 +89,11 @@ async def log_requests(request: Request, call_next):
     logger.info(f"{request.method} {request.url.path} → {response.status_code} ({duration_ms:.0f}ms)")
     return response
 
-from routers.category_router import router as category_router
-from routers.transaction_router import router as transaction_router
+from routers.cash.account_router import router as account_router
+from routers.cash.category_router import router as category_router
+from routers.cash.transaction_router import router as transaction_router
+from routers.cash.transfer_router import router as transfer_router
+from routers.cash.exchange_rate_router import router as exchange_rate_router
 from routers.holding_router import router as holding_router
 from routers.investment_transaction_router import router as investment_transaction_router
 from routers.asset_price_router import router as asset_price_router
@@ -92,8 +101,11 @@ from routers.asset_router import router as asset_router
 from routers.portfolio_router import router as portfolio_router
 from routers.bes_router import router as bes_router
 
-app.include_router(category_router)
-app.include_router(transaction_router)
+app.include_router(account_router,       prefix="/cash/accounts",       tags=["accounts"])
+app.include_router(category_router,      prefix="/cash/categories",     tags=["categories"])
+app.include_router(transaction_router,   prefix="/cash/transactions",   tags=["transactions"])
+app.include_router(transfer_router,      prefix="/cash/transfers",      tags=["transfers"])
+app.include_router(exchange_rate_router, prefix="/cash/exchange-rates", tags=["exchange-rates"])
 app.include_router(holding_router)
 app.include_router(investment_transaction_router)
 app.include_router(asset_price_router)
@@ -112,7 +124,7 @@ if __name__ == "__main__":
 
     from alembic.config import Config
     from alembic import command as alembic_command
-    from database import DATABASE_URL
+    from core.database import DATABASE_URL
     base_dir = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
     alembic_cfg = Config(str(base_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(base_dir / "alembic"))

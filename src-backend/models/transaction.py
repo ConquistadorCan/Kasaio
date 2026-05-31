@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from core.database import Base
 from enums.currency_enum import Currency
 from enums.transaction_type_enum import TransactionType
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
+from core.database import get_db
 from schemas.portfolio_schemas import PortfolioSummaryResponse
 from services.portfolio_service import get_portfolio_summary
 

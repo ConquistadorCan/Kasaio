@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from core.database import Base
 
 
 class Transfer(Base):

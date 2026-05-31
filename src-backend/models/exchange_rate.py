@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Enum, Numeric, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from core.database import Base
 from enums.currency_enum import Currency
 
 

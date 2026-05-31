@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
+from core.database import get_db
 from schemas.asset_schemas import AssetResponse, EurobondDetailsUpdate
 from services.asset_service import get_asset, get_assets, update_eurobond_details
 

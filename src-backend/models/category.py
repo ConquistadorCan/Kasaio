@@ -1,7 +1,7 @@
 from sqlalchemy import Enum, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from core.database import Base
 from enums.category_type_enum import CategoryType
 
 
