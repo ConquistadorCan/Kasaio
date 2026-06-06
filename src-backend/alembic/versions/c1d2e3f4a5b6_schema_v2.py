@@ -40,27 +40,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 2. Insert default accounts so existing FKs can be satisfied
     conn = op.get_bind()
-    conn.execute(
-        sa.text(
-            "INSERT INTO accounts (name, account_type, currency, is_active) "
-            "VALUES ('Default Cash', 'cash', 'TRY', 1)"
-        )
-    )
-    default_cash_id = conn.execute(sa.text("SELECT last_insert_rowid()")).scalar()
 
-    conn.execute(
-        sa.text(
-            "INSERT INTO accounts (name, account_type, currency, is_active) "
-            "VALUES ('Default Investment', 'investment', 'TRY', 1)"
-        )
-    )
-    default_investment_id = conn.execute(
-        sa.text("SELECT last_insert_rowid()")
-    ).scalar()
-
-    # 3. Migrate categories — add type column (nullable first, then recreate NOT NULL)
+    # 2. Migrate categories — add type column (nullable first, then recreate NOT NULL)
     with op.batch_alter_table("categories") as batch_op:
         batch_op.add_column(sa.Column("type", sa.Text(), nullable=True))
 
@@ -75,9 +57,6 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("source_type", sa.Text(), nullable=True))
         batch_op.add_column(sa.Column("source_id", sa.Integer(), nullable=True))
 
-    conn.execute(
-        sa.text(f"UPDATE transactions SET account_id = {default_cash_id}")
-    )
     conn.execute(
         sa.text("UPDATE transactions SET type = lower(type)")
     )
@@ -110,9 +89,6 @@ def upgrade() -> None:
     with op.batch_alter_table("assets") as batch_op:
         batch_op.add_column(sa.Column("account_id", sa.Integer(), nullable=True))
 
-    conn.execute(
-        sa.text(f"UPDATE assets SET account_id = {default_investment_id}")
-    )
     conn.execute(
         sa.text("UPDATE assets SET asset_type = lower(asset_type)")
     )
