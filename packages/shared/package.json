@@ -1,0 +1,15 @@
+{
+  "name": "@kasaio/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/ipc.d.ts",
+      "import": "./dist/ipc.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  }
+}
