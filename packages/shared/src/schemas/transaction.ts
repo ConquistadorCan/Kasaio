@@ -1,4 +1,4 @@
-import { Currency } from './enums.js'
+import { Currency } from '../enums/currency.js'
 
 export const TransactionType = {
   INCOME:   'income',
@@ -8,14 +8,14 @@ export const TransactionType = {
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType]
 
 export interface Transaction {
-  id:             number
-  account_id:     number
-  category_id:    number | null
+  id:               number
+  account_id:       number
+  category_id:      number | null
   transaction_type: TransactionType
-  amount:         number
-  currency:       Currency
-  transacted_at:  string
-  description:    string | null
+  amount:           number
+  currency:         Currency
+  transacted_at:    string
+  description:      string | null
 }
 
 export type NewTransaction = Omit<Transaction, 'id'>

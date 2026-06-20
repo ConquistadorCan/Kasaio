@@ -1,4 +1,4 @@
-import { Currency } from './enums.js'
+import { Currency } from '../enums/currency.js'
 
 export interface ExchangeRate {
   id:            number
