@@ -1,3 +1,5 @@
+export { ErrorCode, AppError, NotFoundError, ValidationError, BusinessRuleError, ConflictError } from './errors/index.js'
+export type { SerializedError } from './errors/index.js'
 export { Currency } from './enums/currency.js'
 export { Money } from './types/money.js'
 export { ExchangeRate } from './types/exchangeRate.js'
