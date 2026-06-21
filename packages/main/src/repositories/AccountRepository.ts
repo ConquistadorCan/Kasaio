@@ -26,24 +26,24 @@ export class AccountRepository {
     return newAccount!
   }
 
-  update(id: number, data: Partial<NewAccount>): Account {
-    this.findById(id)
-
+  update(id: number, data: Partial<NewAccount>): Account | undefined {
     const fields = Object.keys(data) as (keyof NewAccount)[]
-    if (fields.length === 0) return this.findById(id)!
+    if (fields.length === 0) return this.findById(id)
 
     const setClause = fields.map(f => `${f} = ?`).join(', ')
     const values = fields.map(f => data[f])
 
-    getDb()
+    const result = getDb()
       .prepare(`UPDATE accounts SET ${setClause} WHERE id = ?`)
       .run(...values, id)
 
-    return this.findById(id)!
+    if (result.changes === 0) return undefined
+
+    return this.findById(id)
   }
 
-  delete(id: number): void {
-    this.findById(id)
-    getDb().prepare('DELETE FROM accounts WHERE id = ?').run(id)
+  delete(id: number): boolean {
+    const result = getDb().prepare('DELETE FROM accounts WHERE id = ?').run(id)
+    return result.changes > 0
   }
 }
