@@ -4,14 +4,14 @@ export function up(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS accounts (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT    NOT NULL,
+      name         TEXT    NOT NULL UNIQUE,
       account_type TEXT    NOT NULL CHECK (account_type IN ('cash', 'investment')),
       currency     TEXT    NOT NULL CHECK (currency IN ('TRY', 'USD', 'CAD', 'EUR'))
     );
 
     CREATE TABLE IF NOT EXISTS categories (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT    NOT NULL,
+      name         TEXT    NOT NULL UNIQUE,
       account_type TEXT    NOT NULL CHECK (account_type IN ('cash', 'investment'))
     );
 
