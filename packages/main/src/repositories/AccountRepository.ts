@@ -14,6 +14,14 @@ export class AccountRepository {
     return row
   }
 
+  findByName(name: string): Account | undefined {
+    const row = getDb()
+      .prepare('SELECT * FROM accounts WHERE name = ?')
+      .get(name) as Account | undefined
+    
+    return row
+  }
+
   create(data: NewAccount): Account {
     const result = getDb()
       .prepare('INSERT INTO accounts (name, account_type, currency) VALUES (?, ?, ?)')
