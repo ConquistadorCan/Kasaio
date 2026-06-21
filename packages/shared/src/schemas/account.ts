@@ -1,14 +1,16 @@
-import { Currency } from '../enums/currency.js'
+import { z } from 'zod'
+import { CurrencyEnum } from '../enums/currency.js'
 
-export const AccountType = {
-  CASH:       'cash',
-  INVESTMENT: 'investment',
-} as const
-export type AccountType = typeof AccountType[keyof typeof AccountType]
+export const AccountTypeEnum = z.enum(['cash', 'investment'])
+export type AccountType = z.infer<typeof AccountTypeEnum>
 
-export interface Account {
-  id:           number
-  name:         string
-  account_type: AccountType
-  currency:     Currency
-}
+export const AccountSchema = z.object({
+  id:           z.number(),
+  name:         z.string(),
+  account_type: AccountTypeEnum,
+  currency:     CurrencyEnum,
+})
+export type Account = z.infer<typeof AccountSchema>
+
+export const NewAccountSchema = AccountSchema.omit({ id: true })
+export type NewAccount = z.infer<typeof NewAccountSchema>

@@ -1,7 +1,4 @@
-export const Currency = {
-  TRY: 'TRY',
-  USD: 'USD',
-  CAD: 'CAD',
-  EUR: 'EUR',
-} as const
-export type Currency = typeof Currency[keyof typeof Currency]
+import { z } from 'zod'
+
+export const CurrencyEnum = z.enum(['TRY', 'USD', 'CAD', 'EUR'])
+export type Currency = z.infer<typeof CurrencyEnum>

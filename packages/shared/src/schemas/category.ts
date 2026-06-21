@@ -1,9 +1,12 @@
-import { AccountType } from './account.js'
+import { z } from 'zod'
+import { AccountTypeEnum } from './account.js'
 
-export interface Category {
-  id:           number
-  name:         string
-  account_type: AccountType
-}
+export const CategorySchema = z.object({
+  id:           z.number(),
+  name:         z.string(),
+  account_type: AccountTypeEnum,
+})
+export type Category = z.infer<typeof CategorySchema>
 
-export type NewCategory = Omit<Category, 'id'>
+export const NewCategorySchema = CategorySchema.omit({ id: true })
+export type NewCategory = z.infer<typeof NewCategorySchema>

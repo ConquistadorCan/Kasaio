@@ -1,11 +1,14 @@
-import { Currency } from '../enums/currency.js'
+import { z } from 'zod'
+import { CurrencyEnum } from '../enums/currency.js'
 
-export interface ExchangeRate {
-  id:            number
-  from_currency: Currency
-  to_currency:   Currency
-  rate:          number
-  recorded_at:   string
-}
+export const ExchangeRateSchema = z.object({
+  id:            z.number(),
+  from_currency: CurrencyEnum,
+  to_currency:   CurrencyEnum,
+  rate:          z.number(),
+  recorded_at:   z.string(),
+})
+export type ExchangeRate = z.infer<typeof ExchangeRateSchema>
 
-export type NewExchangeRate = Omit<ExchangeRate, 'id'>
+export const NewExchangeRateSchema = ExchangeRateSchema.omit({ id: true })
+export type NewExchangeRate = z.infer<typeof NewExchangeRateSchema>
