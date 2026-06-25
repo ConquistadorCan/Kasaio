@@ -10,9 +10,9 @@ export function up(db: Database.Database): void {
     );
 
     CREATE TABLE IF NOT EXISTS categories (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT    NOT NULL UNIQUE,
-      account_type TEXT    NOT NULL CHECK (account_type IN ('cash', 'investment'))
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      name          TEXT    NOT NULL UNIQUE,
+      category_type TEXT    NOT NULL CHECK (category_type IN ('income', 'expense'))
     );
 
     CREATE TABLE IF NOT EXISTS exchange_rates (

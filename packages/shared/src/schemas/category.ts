@@ -1,10 +1,12 @@
 import { z } from 'zod'
-import { AccountTypeEnum } from './account.js'
+
+export const CategoryTypeSchema = z.enum(['income', 'expense'])
+export type CategoryType = z.infer<typeof CategoryTypeSchema>
 
 export const CategorySchema = z.object({
-  id:           z.number(),
-  name:         z.string(),
-  account_type: AccountTypeEnum,
+  id:            z.number(),
+  name:          z.string(),
+  category_type: CategoryTypeSchema,
 })
 export type Category = z.infer<typeof CategorySchema>
 
