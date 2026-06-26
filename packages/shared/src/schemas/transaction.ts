@@ -11,7 +11,7 @@ export const TransactionSchema = z.object({
   transaction_type: TransactionTypeSchema,
   amount:           z.number(),
   currency:         CurrencyEnum,
-  transacted_at:    z.string(),
+  transacted_at:    z.iso.datetime({ offset: true }),
   description:      z.string().nullable(),
 })
 export type Transaction = z.infer<typeof TransactionSchema>
