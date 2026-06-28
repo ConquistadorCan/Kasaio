@@ -3,10 +3,13 @@ import type Database from 'better-sqlite3'
 export function up(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS accounts (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      name         TEXT    NOT NULL UNIQUE,
-      account_type TEXT    NOT NULL CHECK (account_type IN ('cash', 'investment')),
-      currency     TEXT    NOT NULL CHECK (currency IN ('TRY', 'USD', 'CAD', 'EUR'))
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+      name                   TEXT    NOT NULL UNIQUE,
+      account_type           TEXT    NOT NULL CHECK (account_type IN ('cash', 'investment')),
+      currency               TEXT    NOT NULL CHECK (currency IN ('TRY', 'USD', 'CAD', 'EUR')),
+      linked_cash_account_id INTEGER REFERENCES accounts(id),
+      is_active              INTEGER NOT NULL DEFAULT 1,
+      CHECK (linked_cash_account_id IS NULL OR account_type = 'investment')
     );
 
     CREATE TABLE IF NOT EXISTS categories (
@@ -24,15 +27,6 @@ export function up(db: Database.Database): void {
       CHECK (from_currency != to_currency)
     );
 
-    CREATE TABLE IF NOT EXISTS transfers (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      from_account_id INTEGER NOT NULL REFERENCES accounts(id),
-      to_account_id   INTEGER NOT NULL REFERENCES accounts(id),
-      exchange_rate   REAL    NOT NULL,
-      transferred_at  TEXT    NOT NULL,
-      CHECK (from_account_id != to_account_id)
-    );
-
     CREATE TABLE IF NOT EXISTS transactions (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       account_id       INTEGER NOT NULL REFERENCES accounts(id),
@@ -43,13 +37,21 @@ export function up(db: Database.Database): void {
       transacted_at    TEXT    NOT NULL,
       description      TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS transfers (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+      to_transaction_id   INTEGER NOT NULL REFERENCES transactions(id),
+      exchange_rate       REAL,
+      CHECK (from_transaction_id != to_transaction_id)
+    );
   `)
 }
 
 export function down(db: Database.Database): void {
   db.exec(`
-    DROP TABLE IF EXISTS transactions;
     DROP TABLE IF EXISTS transfers;
+    DROP TABLE IF EXISTS transactions;
     DROP TABLE IF EXISTS exchange_rates;
     DROP TABLE IF EXISTS categories;
     DROP TABLE IF EXISTS accounts;
