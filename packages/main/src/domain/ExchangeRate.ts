@@ -1,6 +1,5 @@
-import { Currency } from '../enums/currency.js'
-import { BusinessRuleError, ErrorCode } from '../errors/index.js'
-import { Money } from './money.js'
+import { Currency, BusinessRuleError, ErrorCode } from '@kasaio/shared'
+import { Money } from './Money.js'
 
 const PRECISION = 1_000_000
 
