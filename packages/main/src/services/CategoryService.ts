@@ -1,12 +1,12 @@
 import { CategoryRepository } from '../repositories/CategoryRepository.js'
+import { TransactionRepository } from '../repositories/TransactionRepository.js'
 import { ConflictError, NotFoundError, ErrorCode, type Category, type NewCategory, type CategoryType } from '@kasaio/shared'
 
 export class CategoryService {
-  private repository: CategoryRepository
-
-  constructor(repository: CategoryRepository) {
-    this.repository = repository
-  }
+  constructor(
+    private repository: CategoryRepository,
+    private transactionRepository: TransactionRepository,
+  ) {}
 
   getAll(type?: CategoryType): Category[] {
     return this.repository.findAll(type)
@@ -50,10 +50,12 @@ export class CategoryService {
   }
 
   delete(id: number): void {
-    const deleted = this.repository.delete(id)
+    this.getById(id)
 
-    if (!deleted) {
-      throw new NotFoundError(ErrorCode.CATEGORY_NOT_FOUND, `Category with id ${id} not found.`, { id })
+    if (this.transactionRepository.existsByCategoryId(id)) {
+      throw new ConflictError(ErrorCode.CATEGORY_IN_USE, `Category with id ${id} is used by one or more transactions.`, { id })
     }
+
+    this.repository.delete(id)
   }
 }

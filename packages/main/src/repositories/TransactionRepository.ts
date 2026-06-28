@@ -15,6 +15,13 @@ export class TransactionRepository {
     return getDb().prepare(`SELECT * FROM transactions ${where} ORDER BY transacted_at DESC`).all(...params) as Transaction[]
   }
 
+  existsByCategoryId(categoryId: number): boolean {
+    const row = getDb()
+      .prepare('SELECT 1 FROM transactions WHERE category_id = ? LIMIT 1')
+      .get(categoryId)
+    return row !== undefined
+  }
+
   findById(id: number): Transaction | undefined {
     return getDb()
       .prepare('SELECT * FROM transactions WHERE id = ?')
