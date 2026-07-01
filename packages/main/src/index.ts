@@ -16,7 +16,7 @@ function createWindow() {
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -26,6 +26,7 @@ function createWindow() {
     win.loadFile(path.join(__dirname, '../../renderer/dist/index.html'))
   } else {
     win.loadURL('http://localhost:5173')
+    win.webContents.openDevTools()
   }
 }
 
