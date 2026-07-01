@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { createServices } from './services/index.js'
@@ -8,6 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 registerAllHandlers(createServices())
+
+Menu.setApplicationMenu(null)
 
 function createWindow() {
   const win = new BrowserWindow({
