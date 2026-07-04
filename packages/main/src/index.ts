@@ -1,9 +1,12 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import log from 'electron-log/main'
 import { createServices } from './services/index.js'
 import { registerAllHandlers } from './ipc/index.js'
 import { runMigrations } from './db/migrator.js'
+
+log.initialize()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

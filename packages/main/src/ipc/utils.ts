@@ -1,3 +1,4 @@
+import log from 'electron-log/main'
 import { AppError, ok, error } from '@kasaio/shared'
 import type { Result } from '@kasaio/shared'
 
@@ -6,7 +7,12 @@ export function withResult<T>(action: () => T): Result<T> {
   try {
     return ok(action())
   } catch (caughtError) {
+    log.error(caughtError)
     if (caughtError instanceof AppError) return error(caughtError.toSerializable())
-    return error({ name: 'UnknownError', code: 'UNKNOWN' as never, message: String(caughtError) })
+    return error({
+      name: 'UnknownError',
+      code: 'UNKNOWN' as never,
+      message: 'An unexpected error occurred.',
+    })
   }
 }
