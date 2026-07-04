@@ -53,3 +53,7 @@ electron-builder-cache/
 
 # pnpm
 .pnpm-store/
+
+# Markdown note
+*.md
+!README.md
