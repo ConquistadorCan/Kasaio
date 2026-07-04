@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import TopNav from './TopNav'
 import AccountForm from './AccountForm'
 import { useAccounts } from '../hooks/useAccounts'
+import { getErrorMessage } from '../lib/errorMessages'
 
 export default function Layout() {
   const { data: accounts, isLoading, isError, error } = useAccounts()
@@ -17,7 +18,7 @@ export default function Layout() {
   if (isError) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-sm text-destructive">
-        Failed to load accounts: {error.message}
+        Failed to load accounts: {getErrorMessage(error)}
       </div>
     )
   }
