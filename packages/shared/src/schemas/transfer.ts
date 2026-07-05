@@ -1,12 +1,13 @@
 import { z } from 'zod'
 import { TransactionResponseSchema } from './transaction.js'
 
-// DB row: links two transactions.
+// DB row: links two transactions. exchange_rate is stored scaled by
+// ExchangeRate.PRECISION (see domain/ExchangeRate.ts), not a plain decimal.
 export const TransferSchema = z.object({
   id:                  z.number(),
   from_transaction_id: z.number(),
   to_transaction_id:   z.number(),
-  exchange_rate:       z.number().nullable(),
+  exchange_rate:       z.number().int().nullable(),
 })
 export type Transfer = z.infer<typeof TransferSchema>
 
@@ -27,7 +28,9 @@ export type TransferRequest = z.infer<typeof TransferRequestSchema>
 
 // What the client gets back: the link row plus both created transactions.
 export const TransferResponseSchema = TransferSchema.extend({
-  from_transaction: TransactionResponseSchema,
-  to_transaction:   TransactionResponseSchema,
+  exchange_rate:           z.number().nullable(),
+  exchange_rate_formatted: z.string().nullable(),
+  from_transaction:        TransactionResponseSchema,
+  to_transaction:          TransactionResponseSchema,
 })
 export type TransferResponse = z.infer<typeof TransferResponseSchema>

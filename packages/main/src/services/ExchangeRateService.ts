@@ -1,5 +1,5 @@
 import { ExchangeRateRepository } from '../repositories/ExchangeRateRepository.js'
-import { NotFoundError, ErrorCode, type ExchangeRate, type NewExchangeRate } from '@kasaio/shared'
+import { NotFoundError, ErrorCode, type ExchangeRate, type ExchangeRateRequest } from '@kasaio/shared'
 import { ExchangeRate as ExchangeRateDomain } from '../domain/ExchangeRate.js'
 
 export class ExchangeRateService {
@@ -19,11 +19,10 @@ export class ExchangeRateService {
     return rate
   }
 
-  create(data: NewExchangeRate): ExchangeRate {
-    // Result discarded; called only to enforce the from != to currency rule.
-    ExchangeRateDomain.fromDecimal(data.rate, data.from_currency, data.to_currency)
+  create(data: ExchangeRateRequest): ExchangeRate {
+    const rate = ExchangeRateDomain.fromDecimal(data.rate, data.from_currency, data.to_currency)
 
-    return this.repository.create(data)
+    return this.repository.create({ ...data, rate: rate.toStored() })
   }
 
   delete(id: number): void {

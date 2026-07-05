@@ -65,12 +65,14 @@ export class TransferService {
 
     // Money leaves the from-account and arrives in the to-account's currency
     // (converted when the two currencies differ).
-    const fromMoney = Money.fromDecimal(data.amount, fromAccount.currency)
-    const toMoney = sameCurrency
-      ? Money.fromDecimal(data.amount, toAccount.currency)
-      : ExchangeRate.fromDecimal(data.exchange_rate!, fromAccount.currency, toAccount.currency).convert(fromMoney)
+    const rate = sameCurrency
+      ? null
+      : ExchangeRate.fromDecimal(data.exchange_rate!, fromAccount.currency, toAccount.currency)
 
-    const storedRate = sameCurrency ? null : data.exchange_rate!
+    const fromMoney = Money.fromDecimal(data.amount, fromAccount.currency)
+    const toMoney = rate ? rate.convert(fromMoney) : Money.fromDecimal(data.amount, toAccount.currency)
+
+    const storedRate = rate ? rate.toStored() : null
 
     const newFromTransaction: NewTransaction = {
       account_id: fromAccount.id,

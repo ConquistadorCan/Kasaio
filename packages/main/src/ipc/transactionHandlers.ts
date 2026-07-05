@@ -9,7 +9,7 @@ function toResponse(row: Transaction): TransactionResponse {
   return {
     ...row,
     amount: money.toDecimal(),
-    amountFormatted: money.format(),
+    amount_formatted: money.format(),
   }
 }
 

@@ -28,7 +28,7 @@ export const TransactionRequestSchema = TransactionSchema
 export type TransactionRequest = z.infer<typeof TransactionRequestSchema>
 
 export const TransactionResponseSchema = TransactionSchema.extend({
-  amount:          z.number(),
-  amountFormatted: z.string(),
+  amount:           z.number(),
+  amount_formatted: z.string(),
 })
 export type TransactionResponse = z.infer<typeof TransactionResponseSchema>

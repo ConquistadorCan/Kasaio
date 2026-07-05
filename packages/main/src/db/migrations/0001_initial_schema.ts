@@ -22,7 +22,7 @@ export function up(db: Database.Database): void {
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       from_currency TEXT    NOT NULL CHECK (from_currency IN ('TRY', 'USD', 'CAD', 'EUR')),
       to_currency   TEXT    NOT NULL CHECK (to_currency   IN ('TRY', 'USD', 'CAD', 'EUR')),
-      rate          REAL    NOT NULL,
+      rate          INTEGER NOT NULL,
       recorded_at   TEXT    NOT NULL,
       CHECK (from_currency != to_currency)
     );
@@ -42,7 +42,7 @@ export function up(db: Database.Database): void {
       id                  INTEGER PRIMARY KEY AUTOINCREMENT,
       from_transaction_id INTEGER NOT NULL REFERENCES transactions(id),
       to_transaction_id   INTEGER NOT NULL REFERENCES transactions(id),
-      exchange_rate       REAL,
+      exchange_rate       INTEGER,
       CHECK (from_transaction_id != to_transaction_id)
     );
   `)

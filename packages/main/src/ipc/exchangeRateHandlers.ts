@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron'
 import type { ExchangeRateService } from '../services/ExchangeRateService.js'
-import type { ExchangeRate, ExchangeRateResponse, NewExchangeRate } from '@kasaio/shared'
+import type { ExchangeRate, ExchangeRateRequest, ExchangeRateResponse } from '@kasaio/shared'
 import { withResult } from './utils.js'
 import { ExchangeRate as ExchangeRateDomain } from '../domain/ExchangeRate.js'
 
 function toResponse(row: ExchangeRate): ExchangeRateResponse {
-  const rate = ExchangeRateDomain.fromDecimal(row.rate, row.from_currency, row.to_currency)
-  return { ...row, rateFormatted: rate.format() }
+  const rate = ExchangeRateDomain.fromStored(row.rate, row.from_currency, row.to_currency)
+  return { ...row, rate: rate.toDecimal(), rate_formatted: rate.format() }
 }
 
 export function registerExchangeRateHandlers(exchangeRateService: ExchangeRateService): void {
@@ -18,7 +18,7 @@ export function registerExchangeRateHandlers(exchangeRateService: ExchangeRateSe
     withResult(() => toResponse(exchangeRateService.getById(id))),
   )
 
-  ipcMain.handle('exchangeRates:create', (_event, data: NewExchangeRate) =>
+  ipcMain.handle('exchangeRates:create', (_event, data: ExchangeRateRequest) =>
     withResult(() => toResponse(exchangeRateService.create(data))),
   )
 
