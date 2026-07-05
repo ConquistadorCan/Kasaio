@@ -3,7 +3,7 @@ import type { Account, NewAccount } from './schemas/account.js'
 import type { Category, NewCategory, CategoryType } from './schemas/category.js'
 import type { TransactionRequest, TransactionResponse } from './schemas/transaction.js'
 import type { TransferRequest, TransferResponse } from './schemas/transfer.js'
-import type { ExchangeRate, NewExchangeRate } from './schemas/exchangeRate.js'
+import type { NewExchangeRate, ExchangeRateResponse } from './schemas/exchangeRate.js'
 
 export interface IpcChannels {
   'accounts:get-all': { request: void; response: Result<Account[]> }
@@ -28,8 +28,8 @@ export interface IpcChannels {
   'transfers:create': { request: TransferRequest; response: Result<TransferResponse> }
   'transfers:delete': { request: { id: number }; response: Result<void> }
 
-  'exchangeRates:get-all': { request: void; response: Result<ExchangeRate[]> }
-  'exchangeRates:get-by-id': { request: { id: number }; response: Result<ExchangeRate> }
-  'exchangeRates:create': { request: NewExchangeRate; response: Result<ExchangeRate> }
+  'exchangeRates:get-all': { request: void; response: Result<ExchangeRateResponse[]> }
+  'exchangeRates:get-by-id': { request: { id: number }; response: Result<ExchangeRateResponse> }
+  'exchangeRates:create': { request: NewExchangeRate; response: Result<ExchangeRateResponse> }
   'exchangeRates:delete': { request: { id: number }; response: Result<void> }
 }

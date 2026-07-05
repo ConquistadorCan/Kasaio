@@ -12,3 +12,8 @@ export type ExchangeRate = z.infer<typeof ExchangeRateSchema>
 
 export const NewExchangeRateSchema = ExchangeRateSchema.omit({ id: true })
 export type NewExchangeRate = z.infer<typeof NewExchangeRateSchema>
+
+export const ExchangeRateResponseSchema = ExchangeRateSchema.extend({
+  rateFormatted: z.string(),
+})
+export type ExchangeRateResponse = z.infer<typeof ExchangeRateResponseSchema>
