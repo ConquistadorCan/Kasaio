@@ -3,6 +3,9 @@ import { Toaster } from 'sonner'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
+import Accounts from './pages/Accounts'
+import Transactions from './pages/Transactions'
+import Categories from './pages/Categories'
 
 const router = createBrowserRouter([
   {
@@ -10,6 +13,9 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Dashboard /> },
+      { path: 'accounts', element: <Accounts /> },
+      { path: 'transactions', element: <Transactions /> },
+      { path: 'categories', element: <Categories /> },
     ],
   },
 ])
