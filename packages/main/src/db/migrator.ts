@@ -32,7 +32,7 @@ export async function runMigrations(): Promise<void> {
 
   const umzug = new Umzug({
     migrations: {
-      glob: path.join(__dirname, 'migrations/*.js'),
+      glob: path.join(__dirname, 'migrations/*.js').split(path.sep).join('/'),
       resolve({ name, path: migPath }) {
         return {
           name,
