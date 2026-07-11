@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import TopNav from './TopNav'
-import AccountForm from './AccountForm'
+import OnboardingScreen from './OnboardingScreen'
 import { useAccounts } from '../hooks/useAccounts'
 import { getErrorMessage } from '../lib/errorMessages'
 
@@ -24,11 +24,11 @@ export default function Layout() {
   }
 
   if (!accounts || accounts.length === 0) {
-    return <AccountForm open forced />
+    return <OnboardingScreen />
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background animate-in fade-in duration-500">
       <TopNav />
       <main className="flex-1 overflow-y-auto">
         <Outlet />
