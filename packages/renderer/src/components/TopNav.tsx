@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { Settings } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const navItems = [
@@ -30,6 +31,20 @@ export default function TopNav() {
           </NavLink>
         ))}
       </nav>
+      <NavLink
+        to="/categories"
+        aria-label="Settings"
+        className={({ isActive }) =>
+          cn(
+            'ml-auto rounded-md p-1.5 transition-colors',
+            isActive
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+          )
+        }
+      >
+        <Settings className="size-4" />
+      </NavLink>
     </header>
   )
 }
