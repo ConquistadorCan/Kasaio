@@ -28,11 +28,13 @@ export default function Accounts() {
       {!isLoading && !isError && (
         <div className="flex flex-col gap-8">
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium text-muted-foreground">Cash</h2>
+            <h2 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">
+              Cash &middot; {cashAccounts.length}
+            </h2>
             {cashAccounts.length === 0 ? (
               <p className="text-sm text-muted-foreground">No cash accounts yet.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-wrap gap-3">
                 {cashAccounts.map((account) => (
                   <AccountCard key={account.id} account={account} />
                 ))}
@@ -41,11 +43,13 @@ export default function Accounts() {
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium text-muted-foreground">Investment</h2>
+            <h2 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">
+              Investment &middot; {investmentAccounts.length}
+            </h2>
             {investmentAccounts.length === 0 ? (
               <p className="text-sm text-muted-foreground">No investment accounts yet.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-wrap gap-3">
                 {investmentAccounts.map((account) => (
                   <AccountCard key={account.id} account={account} />
                 ))}
